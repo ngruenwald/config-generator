@@ -1,0 +1,160 @@
+{%- import '_macros.j2' as m -%}
+
+{#-
+  Renders a list of load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro load_functions(types, unique_types) -%}
+{%- if types -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types %}
+{{ load_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro load_function(type) -%}
+static void from_json(
+    const nlohmann::json& j,
+    {{ m.type_case(type.name) }}& v)
+{
+{%- filter indent(4) -%}
+{%- for field in type.fields %}
+{% if field.required %}{{ load_required_field(field) }}{% else %}{{ load_optional_field(field) }}{% endif %}
+{% endfor -%}
+{%- endfilter -%}
+}
+{%- endmacro -%}
+
+
+{#
+  Load a required field
+  @param field  The field
+#}
+{%- macro load_required_field(field) -%}
+{%- if field.type.type in ['object', 'array', 'list'] -%}
+j.at("{{ field.type.alias }}").get_to(v.{{ m.value_case(field.name) }});
+{%- elif field.type.type == 'enum' and field.type.base_type == 'string' -%}
+{
+    get_enum(j, v.{{ m.value_case(field.name) }}, "{{ field.type.alias }}");
+}
+{%- elif field.type.type in ['uint', 'unsigned'] and field.type.base != 10 -%}
+{
+    std::string tmp;
+    j.at("{{ field.name }}").get_to(tmp);
+    v.{{ m.value_case(field.name) }} = std::stoull(tmp, 0, {{ field.type.base }});
+}
+{%- else -%}
+j.at("{{ field.name }}").get_to(v.{{ m.value_case(field.name) }});
+{%- endif -%}
+{%- endmacro -%}
+
+
+{#
+  Load an optional field
+  @param field  The field
+#}
+{%- macro load_optional_field(field) -%}
+{%- if field.type.type in ['object', 'array', 'list'] -%}
+if (j.contains("{{ field.type.alias }}"))
+{
+    j.at("{{ field.type.alias }}").get_to(v.{{ m.value_case(field.name) }});
+}
+{%- elif field.type.type == 'enum' and field.type.base_type == 'string' -%}
+if (j.contains("{{ field.type.alias }}"))
+{
+    get_enum(j, v.{{ m.value_case(field.name) }}, "{{ field.type.alias }}");
+}
+{%- elif field.type.type in ['uint', 'unsigned'] and field.type.base != 10 -%}
+if (j.contains("{{ field.name }}"))
+{
+    std::string tmp;
+    j.at("{{ field.name }}").get_to(tmp);
+    v.{{ m.value_case(field.name) }} = std::stoull(tmp, 0, {{ field.type.base }});
+}
+{%- else -%}
+if (j.contains("{{ field.name }}"))
+{
+    j.at("{{ field.name }}").get_to(v.{{ m.value_case(field.name) }});
+}
+{%- endif -%}
+{%- endmacro -%}
+
+
+#include <functional>
+#include <iostream>
+#include <fstream>
+
+#include <nlohmann/json.hpp>
+
+#include "config.hpp"
+#include "from_string.hpp"
+
+
+namespace config {
+
+template<typename T>
+void get_enum(
+    const nlohmann::json& j,
+    T& v,
+    const char* name)
+{
+    std::string tmp;
+    j.at(name).get_to(tmp);
+    if (!from_string(tmp.c_str(), v))
+    {
+        throw std::invalid_argument("invalid enum value");
+    }
+}
+
+{% if types -%}
+{{ load_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ load_functions(elements, unique_elements) }}
+{%- endif -%}
+
+static void from_json(
+    const nlohmann::json& j,
+    Config& v)
+{
+{%- filter indent(4) -%}
+{%- for field in config.fields %}
+{% if field.required %}{{ load_required_field(field) }}{% else %}{{ load_optional_field(field) }}{% endif %}
+{% endfor -%}
+{%- endfilter -%}
+}
+
+struct std::unique_ptr<Config> LoadConfig(
+    const std::string& configPath)
+{
+{%- if elements %}
+    try
+    {
+        std::ifstream ifs{configPath.c_str()};
+
+        if (!ifs.good())
+        {
+            throw std::runtime_error("could not load file");
+        }
+
+        nlohmann::json j;
+        ifs >> j;
+
+        auto config = std::make_unique<struct Config>();
+        from_json(j, *config);
+
+        return config;
+    }
+    catch (const std::exception& ex)
+    {
+        throw;
+    }
+{%- endif %}
+
+    return {};
+}
+
+} // namespace config
