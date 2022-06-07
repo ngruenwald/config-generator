@@ -1,0 +1,184 @@
+{%- import '_macros.j2' as m -%}
+
+{#-
+  Renders forward declarations for load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro forward_declarations(types, unique_types) -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types -%}
+struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(const xml::Node& node);
+{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#-
+  Renders a list of load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro load_functions(types, unique_types) -%}
+{%- if types -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types %}
+{{ load_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro load_function(type) -%}
+static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
+    const xml::Node& node)
+{
+    struct {{ m.type_case(type.name) }} config;
+{% filter indent(4) %}
+{{ load_fields('config.', type.fields) }}
+{%- endfilter %}
+    return config;
+}
+{%- endmacro -%}
+
+{%- macro load_fields(prefix, fields) -%}
+{%- for field in fields -%}
+{{ load_field(prefix, field) }}
+{% endfor -%}
+{%- endmacro -%}
+
+{%- macro load_field(prefix, field) -%}
+{% if field.required %}XML_MANDATORY({% else %}XML_OPTIONAL({% endif -%}
+{{ prefix }}{{ m.value_case(field.name) }} =
+{%- if field.type.type in ['object'] %} Load{{ m.type_case(field.type.name) }}(node.GetChild("{{ field.type.alias }}"))
+{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_case(field.type.item_type.name) }}>(node, "{{ field.type.alias }}", Load{{ m.type_case(field.type.item_type.name) }})
+{%- elif field.type.type in ['enum'] %}
+  {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(node, "{{ field.type.alias }}")
+  {%- else %} from_string<{{ m.type_name(field.type.base_type) }}>(node.GetStringProp("{{ field.name }}"){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- endif %}
+{%- else %} from_string<{{ m.type_name(field.type.type) }}>(node.GetStringProp("{{ field.name }}"){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+{%- endif -%}
+);
+{%- endmacro -%}
+
+#include <functional>
+#include <iostream>
+
+#include <libxmlwrp.hpp>
+
+#include "config.hpp"
+#include "from_string.hpp"
+#include "embedded_resources.h"
+
+
+static void GetSchemaData(
+    const char*& buffer,
+    size_t& size)
+{
+    BINARY_RESOURCE_DATA(xsd_data, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+    BINARY_RESOURCE_SIZE(xsd_size, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+
+    buffer = reinterpret_cast<const char*>(xsd_data);
+    size = xsd_size;
+}
+
+
+namespace config {
+
+template<typename E>
+E load_enum(
+    const xml::Node& node,
+    const char* attr)
+{
+    E e;
+    if (!from_string(node.GetStringProp(attr).c_str(), e))
+    {
+        throw std::invalid_argument("invalid enum value");
+    }
+    return e;
+}
+
+template<typename T>
+std::vector<T> load_array(
+    const xml::Node& node,
+    const char* name,
+    std::function<T(const xml::Node&)> f)
+{
+    std::vector<T> v;
+    for (const auto& child : node.GetChildren(name))
+    {
+        v.push_back(f(child));
+    }
+    return v;
+}
+
+{% if types -%}
+{#-{{ forward_declarations(types, unique_types) }}-#}
+{{ load_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ load_functions(elements, unique_elements) }}
+{%- endif -%}
+
+static void ValidateConfig(
+    const xml::Document& doc)
+{
+    const char* data;
+    size_t size = 0;
+    GetSchemaData(data, size);
+
+    xml::Schema schema{data, size};
+
+    if (!schema.IsValid(doc))
+    {
+        throw xml::Exception("ERROR: configuration is not valid");
+    }
+}
+
+bool ValidateConfig(
+    const std::string& configPath)
+{
+    try
+    {
+        xml::Document doc{configPath.c_str()};
+
+        ValidateConfig(doc);
+
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << ex.what() << "\n\n";
+    }
+
+    return false;
+}
+
+struct std::unique_ptr<Config> LoadConfig(
+    const std::string& configPath)
+{
+{%- if elements %}
+    try
+    {
+        xml::Document doc{configPath.c_str()};
+
+        ValidateConfig(doc);
+
+        auto node = doc.GetRootNode();
+
+        auto config = std::make_unique<struct Config>();
+
+        {% filter indent(8) -%}
+        {{ load_fields('config->', config.fields) }}
+        {%- endfilter %}
+        return config;
+    }
+    catch (const std::exception& ex)
+    {
+        throw;
+    }
+{%- endif %}
+
+    return {};
+}
+
+} // namespace config
