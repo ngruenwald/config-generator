@@ -185,17 +185,19 @@ class ObjectField():
 
 class ObjectType(Type):
     def __init__(self, name: str, type: str, description: str = None,
-                 fields: List[ObjectField] = None):
+                 fields: List[ObjectField] = None, xmltype: str = 'sequence'):
         super().__init__(name, type, description)
         self.fields = fields
+        self.xmltype = xmltype
 
     def __str__(self):
-        return f'ObjectType{{name={self.name},type={self.type},alias={self.alias},fields={self.fields}}}'
+        return f'ObjectType{{name={self.name},type={self.type},alias={self.alias},fields={self.fields},xmltype={self.xmltype}}}'
 
     @staticmethod
     def create(data: dict(), name: str, props: str):
         fields = []
         required_fields = v_or_d(props, 'required', [])
+        xmltype = v_or_d(props, 'xmltype', 'sequence')
         if 'properties' in props:
             for pkey, pval in props['properties'].items():
                 pt = load_type(data, pkey, pval)
@@ -212,7 +214,8 @@ class ObjectType(Type):
             name=name,
             type=v_or_d(props, 'type', 'object'),
             description=v_or_d(props, 'description', ''),
-            fields=fields
+            fields=fields,
+            xmltype=xmltype
         )
 
 
