@@ -210,6 +210,7 @@ type names:
 properties:
 * properties    ... list of properties
 * required      ... list of names of the required properties    (default: none)
+* xmltype       ... xml compositor type (all/choice/sequence)   (default: sequence)
 
 A property can either be a type definition or a
 reference (_$ref_) to another type.
