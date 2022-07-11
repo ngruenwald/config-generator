@@ -228,7 +228,7 @@
 {%- endfor -%}
 {%- if tmp['num_elements'] > 0 %}
   {%- if t['xml']['type'] | default('sequence') == 'choice' -%}
-  <xs:choice minOccurs="{{ t['xml']['min'] | default(0) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
+  <xs:choice minOccurs="{{ t['xml']['min'] | default(1) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
   {%- else -%}
   <xs:{{ t['xml'][''] | default('sequence') }}>
   {%- endif -%}
