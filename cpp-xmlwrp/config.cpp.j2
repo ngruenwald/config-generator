@@ -81,8 +81,13 @@ static void GetSchemaData(
     size = xsd_size;
 }
 
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+namespace {{ namespace }} {
+{%- endfor %}
+{%- else %}
 namespace config {
+{%- endif %}
 
 template<typename E>
 E load_enum(
@@ -180,5 +185,11 @@ struct std::unique_ptr<Config> LoadConfig(
 
     return {};
 }
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+} // namespace {{ namespace }}
+{%- endfor %}
+{%- else %}
 } // namespace config
+{%- endif %}
+
