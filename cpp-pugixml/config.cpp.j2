@@ -52,15 +52,20 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 
 #include <pugixml.hpp>
 
-#include "config.hpp"
+#include "{{ options['output_prefix'] | default('') }}config.hpp"
 #include "from_string.hpp"
 
 
 #define XML_MANDATORY(x) try { x; } catch (...) { throw; }
 #define XML_OPTIONAL(x)  try { x; } catch (...) { }
 
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+namespace {{ namespace }} {
+{%- endfor %}
+{%- else %}
 namespace config {
+{%- endif %}
 
 static pugi::xml_node get_child(
     const pugi::xml_node& node,
@@ -163,5 +168,11 @@ struct std::unique_ptr<Config> LoadConfig(
 
     return {};
 }
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+} // namespace {{ namespace }}
+{%- endfor %}
+{%- else %}
 } // namespace config
+{%- endif %}
+

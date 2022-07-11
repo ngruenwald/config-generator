@@ -89,11 +89,16 @@ if (j.contains("{{ field.name }}"))
 
 #include <nlohmann/json.hpp>
 
-#include "config.hpp"
+#include "{{ options['output_prefix'] | default('') }}config.hpp"
 #include "from_string.hpp"
 
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+namespace {{ namespace }} {
+{%- endfor %}
+{%- else %}
 namespace config {
+{%- endif %}
 
 template<typename T>
 void get_enum(
@@ -156,5 +161,11 @@ struct std::unique_ptr<Config> LoadConfig(
 
     return {};
 }
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+} // namespace {{ namespace }}
+{%- endfor %}
+{%- else %}
 } // namespace config
+{%- endif %}
+

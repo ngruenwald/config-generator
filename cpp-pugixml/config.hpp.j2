@@ -130,8 +130,13 @@ std::vector<{{ m.type_name(member.type.item_type.name) }}> {{ m.value_case(membe
 #include <vector>
 
 #include "enums.hpp"
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+namespace {{ namespace }} {
+{%- endfor %}
+{%- else %}
 namespace config {
+{%- endif %}
 
 {% if types -%}
 {{ insert_enums(types, unique_types) }}
@@ -151,5 +156,11 @@ struct std::unique_ptr<Config> LoadConfig(
 /// @returns True if the the configuration is valid, otherwise False
 bool ValidateConfig(
     const std::string& configPath);
-
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+} // namespace {{ namespace }}
+{%- endfor %}
+{%- else %}
 } // namespace config
+{%- endif %}
+

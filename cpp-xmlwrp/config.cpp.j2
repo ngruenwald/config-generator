@@ -67,7 +67,7 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 
 #include <libxmlwrp.hpp>
 
-#include "config.hpp"
+#include "{{ options['output_prefix'] | default('') }}config.hpp"
 #include "from_string.hpp"
 #include "embedded_resources.h"
 
