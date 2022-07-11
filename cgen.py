@@ -185,10 +185,15 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
         assign_constraints(types, elements, constraints)
 
         render_data = dict()
+
         try:
             render_data['info'] = loader.data['info']
         except KeyError:
             render_data['info'] = dict()
+        try:
+            render_data['options'] = loader.data['options']
+        except KeyError:
+            render_data['options'] = dict()
 
         render_data['types'] = types
         render_data['elements'] = elements
