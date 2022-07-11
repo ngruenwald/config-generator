@@ -15,6 +15,24 @@ info:
 The _info_ block contains model specific information,
 which can be used in templates.
 
+#### options
+
+```yaml
+options:
+  output_prefix: my_fancy_
+  cpp:
+    namespaces:
+      - my
+      - fancy
+      - config
+```
+The _options_ block contains generic options.
+
+The generated files are named after their template files.
+With the _output_prefix_ a custom prefix can be added to the generated filenames.
+
+The _cpp_ options allow to specify custom _namespaces_.
+
 #### elements
 
 ```yaml
