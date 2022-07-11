@@ -227,7 +227,11 @@
 {%- endif -%}
 {%- endfor -%}
 {%- if tmp['num_elements'] > 0 %}
-  <xs:{{ t['xmltype'] | default('sequence') }}>
+  {%- if t['xml']['type'] | default('sequence') == 'choice' -%}
+  <xs:choice minOccurs="{{ t['xml']['min'] | default(0) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
+  {%- else -%}
+  <xs:{{ t['xml'][''] | default('sequence') }}>
+  {%- endif -%}
   {%- filter indent(2) %}
   {% for f in t.fields -%}
   {%- if f.type.type in ['object', 'array', 'list'] -%}
@@ -235,7 +239,7 @@
   {% endif -%}
   {%- endfor -%}
   {%- endfilter %}
-  </xs:{{ t['xmltype'] | default('sequence') }}>
+  </xs:{{ t['xml']['type'] | default('sequence') }}>
 {%- endif %}
   {%- for f in t.fields -%}
   {%- if not f.type.type in ['object', 'array', 'list'] %}
