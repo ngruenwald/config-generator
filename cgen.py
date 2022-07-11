@@ -161,7 +161,12 @@ def render(env: Environment, template_file: str, output_path: str, data):
         logging.error(f'Template error: {error.message}')
         raise
 
-    output_file = os.path.join(output_path, os.path.basename(template_file))
+    try:
+        prefix = data['options']['output_prefix']
+    except KeyError:
+        prefix = ''
+
+    output_file = os.path.join(output_path, prefix + os.path.basename(template_file))
 
     with open(output_file, 'w') as stream:
         stream.write(output)
