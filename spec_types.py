@@ -349,15 +349,16 @@ class KeyRefConstraint(Constraint):
 
 def load_constraints(data: dict()) -> List[Constraint]:
     result = []
-    try:
-        for cst in data['constraints']:
-            obj = load_constraint(cst)
-            if obj is None:
-                continue
-            result.append(obj)
-    except Exception:
-        print('failed to load constraints')
-        raise
+    if 'constraints' in data:
+        try:
+            for cst in data['constraints']:
+                obj = load_constraint(cst)
+                if obj is None:
+                    continue
+                result.append(obj)
+        except Exception:
+            print('failed to load constraints')
+            raise
     return result
 
 
