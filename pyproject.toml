@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cgen"
+version = "0.1.0"
+requires-python = ">=3.8"
+authors = [
+    { name = "ngruenwald", email = "some@mail.com" }
+]
+description = "config generator"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "Jinja2",
+    "PyYAML"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ngruenwald/config-generator"
+
+[tool.hatch.build]
+include = [
+    "*.py",
+]
+artifacts = [
+    "cpp-json/*",
+    "cpp-pugixml/*",
+    "cpp-xmlwrp/*",
+    "html-doc/*"
+]

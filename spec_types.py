@@ -1,11 +1,11 @@
-from argparse import ArgumentError
-from typing import List
+from typing import List, Dict, Optional
+from doc import DocEntry
 
 
-class Type():
-    def __init__(self, name: str, type: str, description: str):
+class Type:
+    def __init__(self, name: str, type_: str, description: str):
         self.name = name
-        self.type = type
+        self.type = type_
         self.description = description
         self.alias = name
         self.constraints = []
@@ -15,10 +15,10 @@ class Type():
 
 
 class IntegerType(Type):
-    def __init__(self, name: str, type: str, description: str = None,
+    def __init__(self, name: str, type_: str, description: str = None,
                  base: int = None, defv: str = None,
                  minv: str = None, maxv: str = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.base = base if base else 10
         self.default = defv
         self.min = minv
@@ -28,22 +28,22 @@ class IntegerType(Type):
         return f'IntegerType{{default={self.default}}}'
 
     @staticmethod
-    def create(name: str, props: dict()):
+    def create(name: str, props: Dict):
         return IntegerType(
             name=name,
-            type=v_or_d(props, 'type', 'int'),
-            description=v_or_d(props, 'description', ''),
-            defv=v_or_d(props, 'default', None),
-            base=v_or_d(props, 'base', 10),
-            minv=v_or_d(props, 'min', None),
-            maxv=v_or_d(props, 'max', None)
+            type_=props.get('type', 'int'),
+            description=props.get('description', ''),
+            defv=props.get('default', None),
+            base=props.get('base', 10),
+            minv=props.get('min', None),
+            maxv=props.get('max', None)
         )
 
 
 class FloatingType(Type):
-    def __init__(self, name: str, type: str, description: str = None,
+    def __init__(self, name: str, type_: str, description: str = None,
                  defv: str = None, minv: str = None, maxv: str = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.default = defv
         self.min = minv
         self.max = maxv
@@ -52,41 +52,41 @@ class FloatingType(Type):
         return f'FloatingType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: dict()):
+    def create(name: str, props: Dict):
         return FloatingType(
             name=name,
-            type=v_or_d(props, 'type', 'float'),
-            description=v_or_d(props, 'description', ''),
-            defv=v_or_d(props, 'default', None),
-            minv=v_or_d(props, 'min', None),
-            maxv=v_or_d(props, 'max', None)
+            type_=props.get('type', 'float'),
+            description=props.get('description', ''),
+            defv=props.get('default', None),
+            minv=props.get('min', None),
+            maxv=props.get('max', None)
         )
 
 
 class BooleanType(Type):
-    def __init__(self, name: str, type: str, description: str = None,
+    def __init__(self, name: str, type_: str, description: str = None,
                  defv: bool = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.default = defv if defv is not None else False
 
     def __str__(self):
         return f'BooleanType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: dict()):
+    def create(name: str, props: Dict):
         return BooleanType(
             name=name,
-            type=v_or_d(props, 'type', 'bool'),
-            description=v_or_d(props, 'description', ''),
-            defv=v_or_d(props, 'default', None)
+            type_=props.get('type', 'bool'),
+            description=props.get('description', ''),
+            defv=props.get('default', None)
         )
 
 
 class StringType(Type):
-    def __init__(self, name: str, type: str, description: str = None,
+    def __init__(self, name: str, type_: str, description: str = None,
                  defv: str = None, pattern: str = None,
                  minl: int = None, maxl: int = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.default = defv
         self.pattern = pattern
         self.min = minl
@@ -96,22 +96,22 @@ class StringType(Type):
         return f'StringType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: dict()):
+    def create(name: str, props: Dict):
         return StringType(
             name=name,
-            type=v_or_d(props, 'type', 'string'),
-            description=v_or_d(props, 'description', ''),
-            defv=v_or_d(props, 'default', None),
-            pattern=v_or_d(props, 'pattern', None),
-            minl=v_or_d(props, 'min', None),
-            maxl=v_or_d(props, 'max', None)
+            type_=props.get('type', 'string'),
+            description=props.get('description', ''),
+            defv=props.get('default', None),
+            pattern=props.get('pattern', None),
+            minl=props.get('min', None),
+            maxl=props.get('max', None)
         )
 
 
 class EnumType(Type):
-    def __init__(self, name: str, type: str, base_type: str, enum: List[str],
+    def __init__(self, name: str, type_: str, base_type: str, enum: List[str],
                  description: str = None, defv: str = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.base_type = base_type
         self.enum = enum
         self.default = defv
@@ -120,23 +120,23 @@ class EnumType(Type):
         return f'EnumType{{name={self.name},type={self.type},base_type={self.base_type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: dict()):
+    def create(name: str, props: Dict):
         return EnumType(
             name=name,
-            type='enum',
-            base_type=v_or_d(props, 'type', 'string'),
-            enum=v_or_d(props, 'enum', None),
-            description=v_or_d(props, 'description', ''),
-            defv=v_or_d(props, 'default', None)
+            type_='enum',
+            base_type=props.get('type', 'string'),
+            enum=props.get('enum', None),
+            description=props.get('description', ''),
+            defv=props.get('default', None)
         )
 
 
 class ArrayType(Type):
-    def __init__(self, name: str, type: str, item_type: Type,
+    def __init__(self, name: str, type_: str, item_type: Type,
                  item_name: str, description: str = None,
                  defv: List[str] = None,
                  mins: int = None, maxs: int = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.item_type = item_type
         self.item_name = item_name
         self.default = defv
@@ -147,7 +147,7 @@ class ArrayType(Type):
         return f'ArrayType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(data: dict(), name: str, props: dict()):
+    def create(data: Dict, name: str, props: Dict):
         item_type = None
         if 'items' in props:
             item_type = load_type(data, 'items', props['items'])
@@ -158,21 +158,30 @@ class ArrayType(Type):
 
         return ArrayType(
             name=name,
-            type=v_or_d(props, 'type', 'array'),
+            type_=props.get('type', 'array'),
             item_type=item_type,
-            item_name=v_or_d(props, 'itemName', 'entry'),
-            description=v_or_d(props, 'description', ''),
-            defv=v_or_d(props, 'default', None),
-            mins=v_or_d(props, 'minItems', v_or_d(props, 'min', None)),
-            maxs=v_or_d(props, 'maxItems', v_or_d(props, 'max', None))
+            item_name=props.get('itemName', 'entry'),
+            description=props.get('description', ''),
+            defv=props.get('default', None),
+            mins=props.get('minItems', props.get('min', None)),
+            maxs=props.get('maxItems', props.get('max', None))
         )
 
+    def doc(self, root) -> List[DocEntry]:
+        doc_ = getattr(self.item_type, 'doc', None)
+        if callable(doc_):
+            return doc_(f"{root}")
+        else:
+            xpath = f"{root}/@{self.name}"
+            default = self.item_type.default if hasattr(self.item_type, 'default') else ""
+            return [DocEntry(xpath, self.description, True if self.minsize else False, default)]
 
-class ObjectField():
-    def __init__(self, name: str, type: Type, description: str = None,
+
+class ObjectField:
+    def __init__(self, name: str, type_: Type, description: str = None,
                  required: bool = False):
         self.name = name
-        self.type = type
+        self.type = type_
         self.description = description
         self.required = required
 
@@ -182,11 +191,20 @@ class ObjectField():
     def __repr__(self):
         return self.__str__()
 
+    def doc(self, root) -> List[DocEntry]:
+        doc_ = getattr(self.type, 'doc', None)
+        if callable(doc_):
+            return doc_(f"{root}/{self.name}")
+        else:
+            xpath = f"{root}/@{self.name}"
+            default = self.type.default if hasattr(self.type, 'default') else ""
+            return [DocEntry(xpath, self.description, self.required, default)]
+
 
 class ObjectType(Type):
-    def __init__(self, name: str, type: str, description: str = None,
+    def __init__(self, name: str, type_: str, description: str = None,
                  fields: List[ObjectField] = None, xml: dict = None):
-        super().__init__(name, type, description)
+        super().__init__(name, type_, description)
         self.fields = fields
         self.xml = xml if xml else dict()
 
@@ -194,10 +212,10 @@ class ObjectType(Type):
         return f'ObjectType{{name={self.name},type={self.type},alias={self.alias},fields={self.fields},xml={self.xml}}}'
 
     @staticmethod
-    def create(data: dict(), name: str, props: str):
+    def create(data: Dict, name: str, props: Dict):
         fields = []
-        required_fields = v_or_d(props, 'required', [])
-        xml = v_or_d(props, 'xml', {})
+        required_fields = props.get('required', [])
+        xml = props.get('xml', {})
         if 'properties' in props:
             for pkey, pval in props['properties'].items():
                 pt = load_type(data, pkey, pval)
@@ -205,32 +223,34 @@ class ObjectType(Type):
                     fields.append(
                         ObjectField(
                             name=pkey,
-                            type=pt,
+                            type_=pt,
                             description=pt.description,
                             required=True if pkey in required_fields else False
                         )
                     )
         return ObjectType(
             name=name,
-            type=v_or_d(props, 'type', 'object'),
-            description=v_or_d(props, 'description', ''),
+            type_=props.get('type', 'object'),
+            description=props.get('description', ''),
             fields=fields,
             xml=xml
         )
 
+    def doc(self, root) -> List[DocEntry]:
+        r = []
+        for field in self.fields:
+            r.extend(field.doc(root))
+        return r
 
-def v_or_d(data: dict(), key: str, defv):
-    return data[key] if key in data else defv
 
-
-def data_from_path(data: dict(), path: List[str]):
+def data_from_path(data: Dict, path: List[str]):
     key = path[0]
     if len(path) == 1:
         return key, data[key]
     return data_from_path(data[key], path[1:])
 
 
-def load_type(data: dict(), name: str, props: dict()) -> Type:
+def load_type(data: Dict, name: str, props: Dict) -> Optional[Type]:
     try:
         res = load_type_(data, name, props)
         if not res:
@@ -245,7 +265,7 @@ def load_type(data: dict(), name: str, props: dict()) -> Type:
         raise
 
 
-def load_type_(data: dict(), name: str, props: dict()) -> Type:
+def load_type_(data: Dict, name: str, props: Dict) -> Optional[Type]:
     if 'type' in props:
         if props['type'] in ['int', 'integer', 'number', 'uint', 'unsigned']:
             if 'enum' in props.keys():
@@ -277,7 +297,7 @@ def load_type_(data: dict(), name: str, props: dict()) -> Type:
     return None
 
 
-def load_ref_type(data: dict(), name: str, props: dict()) -> Type:
+def load_ref_type(data: Dict, name: str, props: Dict) -> Type:
     # 1. find and load type from data
     path = props['$ref'].split('/')
     if path[0] != '#':
@@ -288,66 +308,66 @@ def load_ref_type(data: dict(), name: str, props: dict()) -> Type:
 
     # 2. overwrite properties if present
     if isinstance(t, IntegerType):
-        t.description = v_or_d(props, 'description', t.description)
-        t.base = v_or_d(props, 'base', t.base)
-        t.default = v_or_d(props, 'default', t.default)
-        t.min = v_or_d(props, 'min', t.min)
-        t.max = v_or_d(props, 'max', t.max)
+        t.description = props.get('description', t.description)
+        t.base = props.get('base', t.base)
+        t.default = props.get('default', t.default)
+        t.min = props.get('min', t.min)
+        t.max = props.get('max', t.max)
 
     if isinstance(t, FloatingType):
-        t.description = v_or_d(props, 'description', t.description)
-        t.default = v_or_d(props, 'default', t.default)
-        t.min = v_or_d(props, 'min', t.min)
-        t.max = v_or_d(props, 'max', t.max)
+        t.description = props.get('description', t.description)
+        t.default = props.get('default', t.default)
+        t.min = props.get('min', t.min)
+        t.max = props.get('max', t.max)
 
     if isinstance(t, BooleanType):
-        t.description = v_or_d(props, 'description', t.description)
-        t.default = v_or_d(props, 'default', t.default)
+        t.description = props.get('description', t.description)
+        t.default = props.get('default', t.default)
 
     if isinstance(t, StringType):
-        t.description = v_or_d(props, 'description', t.description)
-        t.default = v_or_d(props, 'default', t.default)
-        t.pattern = v_or_d(props, 'pattern', t.pattern)
-        t.min = v_or_d(props, 'min', t.min)
-        t.max = v_or_d(props, 'max', t.max)
+        t.description = props.get('description', t.description)
+        t.default = props.get('default', t.default)
+        t.pattern = props.get('pattern', t.pattern)
+        t.min = props.get('min', t.min)
+        t.max = props.get('max', t.max)
 
     if isinstance(t, EnumType):
-        t.description = v_or_d(props, 'description', t.description)
-        t.default = v_or_d(props, 'default', t.default)
+        t.description = props.get('description', t.description)
+        t.default = props.get('default', t.default)
 
     if isinstance(t, ArrayType):
-        t.description = v_or_d(props, 'description', t.description)
-        t.default = v_or_d(props, 'default', t.default)
-        t.minsize = v_or_d(props, 'min', t.minsize)
-        t.maxsize = v_or_d(props, 'max', t.maxsize)
+        t.description = props.get('description', t.description)
+        t.default = props.get('default', t.default)
+        t.minsize = props.get('min', t.minsize)
+        t.maxsize = props.get('max', t.maxsize)
 
     if isinstance(t, ObjectType):
-        t.description = v_or_d(props, 'description', t.description)
+        t.description = props.get('description', t.description)
 
     return t
 
 
-class Constraint():
-    def __init__(self, typename: str, id: str, scope: str):
+class Constraint:
+    def __init__(self, typename: str, id_: str, scope: str):
         self.type = typename
-        self.id = id
+        self.id = id_
         self.scope = scope
 
 
 class UniqueConstraint(Constraint):
-    def __init__(self, id: str, scope: str, field: str):
-        super().__init__('unique', id, scope)
+    def __init__(self, id_: str, scope: str, field: str):
+        super().__init__('unique', id_, scope)
         self.field = field
 
 
 class KeyRefConstraint(Constraint):
-    def __init__(self, id: str, scope: str, refer: str, field: str):
-        super().__init__('keyref', id, scope)
+    def __init__(self, id_: str, scope: str, refer: str, field: str):
+        super().__init__('keyref', id_, scope)
         self.refer = refer
         self.field = field
 
 
-def load_constraints(data: dict()) -> List[Constraint]:
+def load_constraints(data: Dict) -> List[Constraint]:
     result = []
     if 'constraints' in data:
         try:
@@ -362,7 +382,7 @@ def load_constraints(data: dict()) -> List[Constraint]:
     return result
 
 
-def load_constraint(data: dict()) -> Constraint:
+def load_constraint(data: Dict) -> Optional[Constraint]:
     ctype = 'unknown'
     cid = 'unknown'
     try:
@@ -374,7 +394,7 @@ def load_constraint(data: dict()) -> Constraint:
             ctype = 'keyref'
             cid = data['id']
             return KeyRefConstraint(data['id'], data['scope'], data['refer'], data['field'])
-        raise ArgumentError('unknown constraint type')
+        raise ValueError('unknown constraint type')
     except Exception:
         print(f'failed to load constraint "{ctype}" "{cid}"')
     return None
