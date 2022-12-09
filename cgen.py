@@ -263,11 +263,11 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Config generator')
-    parser.add_argument('definition', type=str, help='definition file')
-    parser.add_argument('--template', type=str, nargs='+', help='template path',
+    parser.add_argument('definition', type=str, help='.yml definition file')
+    parser.add_argument('--template', type=str, nargs='+', help='template path - default: xsd, cpp-xmlwrp',
                         default=[Path(__file__).parent.absolute() / 'xsd',
                                  Path(__file__).parent.absolute() / 'cpp-xmlwrp'])
-    parser.add_argument('--output', type=str, default='out', help='output path')
+    parser.add_argument('--output', type=str, default='out', help='output path - default: out')
     args = parser.parse_args()
     rv = [config_generator(args.definition, t, args.output) for t in args.template]
     return max(rv) if rv else 1
