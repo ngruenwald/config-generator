@@ -31,5 +31,6 @@ artifacts = [
     "cpp-json/*",
     "cpp-pugixml/*",
     "cpp-xmlwrp/*",
-    "html-doc/*"
+    "html-doc/*",
+    "xsd/*"
 ]
