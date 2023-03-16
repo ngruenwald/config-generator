@@ -24,6 +24,10 @@ def j2_snake_case(input):
     return '_'.join(parts)
 
 
+def j2_title_case(input):
+    return input.title()
+
+
 def j2_base(input, base):
     if isinstance(input, int):
         if base == 2:
