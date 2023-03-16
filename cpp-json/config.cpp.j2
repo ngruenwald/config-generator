@@ -145,9 +145,8 @@ struct std::unique_ptr<Config> LoadConfig(
             throw std::runtime_error("could not load file");
         }
 
-        nlohmann::json j;
-        ifs >> j;
-
+        auto j = nlohmann::json::parse(ifs, nullptr, true, true);
+        
         auto config = std::make_unique<struct Config>();
         from_json(j, *config);
 
