@@ -1,0 +1,4 @@
+template:
+  # additional files and folders that should be copied to the output directory
+  publish:
+    - "enums.hpp"
