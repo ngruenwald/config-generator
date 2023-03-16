@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
-from doc import DocEntry
+
+from .doc import DocEntry
 
 
 class Type:
