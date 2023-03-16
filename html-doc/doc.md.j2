@@ -1,0 +1,11 @@
+{% for k,v in sections.items() %}
+### {{ k|capitalize }}
+|  #  | X-Path | Description | Required | Default |
+|:---:|:-------|:------------|:--------:|:-------:|
+{% for row in v -%}
+| {{loop.index}} | {{ '*' + row.xpath + '*' if row.xpath else '' }} | {{ row.description if row.description else '' }} | {{ 'yes' if row.required else '' }} | {{ row.default if row.default else '' }} |
+{% endfor %}
+{% endfor %}
+
+
+*auto generated file (see https://github.com/ngruenwald/config-generator) - please do not edit by hand.*

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+  </head>
+  <body>
+    {% for k,v in sections.items() %}
+    <br>
+    <h3>{{ k|capitalize }}</h3>
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">#</th>
+          <th scope="col">X-Path</th>
+          <th scope="col">Description</th>
+          <th scope="col">Required</th>
+          <th scope="col">Default</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in v %}
+        <tr>
+          <th scope="row">{{loop.index}}</th>
+          <td><i>{{ row.xpath if row.xpath else '' }}</i></td>
+          <td>{{ row.description if row.description else '' }}</td>
+          <td>{{ 'yes' if row.required else '' }}</td>
+          <td>{{ row.default if row.default else '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </body>
+  <footer>
+    <p><i>auto generated file (see https://github.com/ngruenwald/config-generator) - please do not edit by hand.</i></p>
+  </footer>
+</html>
+
+

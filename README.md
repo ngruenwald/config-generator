@@ -263,3 +263,24 @@ myobject:
 * [ ] inheritance / extending objects
 * [ ] cut back on (integer) types
 * [ ] validation and error reporting
+
+
+## Internals
+
+### Build
+
+This project uses hatchling for packaging - edit ```pyproject.toml``` for changes.
+
+```shell
+# (optional) check for updates / install build deps
+python3 -m pip install --upgrade pip --upgrade build
+
+# build the package - execute in project root dir where .toml file exists
+python3 -m build
+
+# (optional) install package from file
+python3 -m pip install cgen-<version>.whl
+
+# (optional) use the installed package with
+python3 -m cgen some.yml
+```
