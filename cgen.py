@@ -229,6 +229,7 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
         except KeyError:
             render_data['options'] = dict()
 
+        render_data['definition'] = definition
         render_data['types'] = types
         render_data['elements'] = elements
 
@@ -240,13 +241,13 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
                     elements]
         )
 
-        docs = render_data['config'].doc('config')
-
         type_names = set([t.name for t in types])
         elem_names = set([e.name for e in elements])
 
         render_data['unique_elements'] = list(elem_names.difference(type_names))
         render_data['unique_types'] = list(type_names.union(elem_names))
+
+        render_data['docs'] = create_render_data(render_data['config'].doc('config'))
 
         file_loader = FileSystemLoader(template_path)
         env = Environment(loader=file_loader)
@@ -272,13 +273,6 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
             else:
                 shutil.copy2(source_path, target_path)
 
-        doc_template_path = Path(template_path).parent.absolute() / "html-doc"
-        file_loader = FileSystemLoader(doc_template_path)
-        env = Environment(loader=file_loader)
-        for file_path in glob.glob(os.path.join(os.getcwd(), doc_template_path, '*.j2')):
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            if not file_name.startswith('_'):
-                render(env, file_name, output_path, create_render_data(docs))
         return 0
 
     except TemplateSyntaxError as e:
