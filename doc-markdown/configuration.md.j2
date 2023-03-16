@@ -1,0 +1,30 @@
+# {{ info.title }}
+{% if info.version | default('') %}
+_Config Version {{ info.version }}_
+{% endif %}
+{{ info.description | default('') }}
+
+{% for title, content in docs.sections.items() -%}
+## {{ title | trim('@') | title_case }}
+{% if content.description | default('') %}
+{{ content.description }}
+{% endif %}
+| #   | {{ '%-40s' | format('X-Path') }} | {{ '%-40s' | format('Description') }} | Required | Default
+|-{{ '-' * 3 }} |-{{ '-' * 40 }} |-{{ '-' * 40 }} |-{{ '-' * ('Required'|length) }} |-{{ '-' * ('Default'|length) }}
+{% for row in content -%}
+| {{ '%3s'   | format(loop.index) }} {# -#}
+| {{ '%-40s' | format(row.xpath | default('')) }} {# -#}
+| {{ '%-40s' | format(row.description | default('') | replace('\n', ' ')) }} {# -#}
+{%- if row.required -%}
+| yes      |
+{%- else -%}
+|          | {{ row.default | default('') }}
+{%- endif %}
+{% endfor %}
+{% endfor %}
+
+---
+
+__NOTE:__
+This content was generated automatically from _{{ definition | default('...') }}_.
+Please do not edit by hand.
