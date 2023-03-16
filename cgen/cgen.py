@@ -3,19 +3,17 @@ import glob
 import logging
 import os
 import shutil
-
 import yaml
-from pathlib import Path
-
-from typing import List, Dict, Optional
 
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError
-from jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
+from pathlib import Path
+from typing import List, Dict, Optional
 
-from spec_types import ArrayType, ObjectType, ObjectField, Type
-from spec_types import Constraint
-from spec_types import load_type, load_constraints
-from doc import create_render_data
+from .doc import create_render_data
+from .jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
+from .spec_types import ArrayType, ObjectType, ObjectField, Type
+from .spec_types import Constraint
+from .spec_types import load_type, load_constraints
 
 
 #
@@ -209,7 +207,7 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
 
         template_path = find_template_path(template_path)
         if not template_path:
-            raise FileNotFoundError(f'template path not found')
+            raise FileNotFoundError('template path not found')
 
         loader = Loader()
         loader.search_paths = ['definition']  # TODO: config
@@ -294,8 +292,9 @@ def find_template_path(path: str):
         return path
     base_paths = [
         Path.cwd(),
-        Path.home() / '.config/cgen',
-        Path(__file__).parent.absolute()
+        Path.cwd() / 'templates',
+        Path.home() / '.config/cgen/templates',
+        Path(__file__).parent.absolute() / 'templates'
     ]
     for bp in base_paths:
         tp = bp / path
@@ -304,21 +303,12 @@ def find_template_path(path: str):
     return None
 
 
-def main() -> int:
+def cgen() -> int:
     parser = argparse.ArgumentParser(description='Config generator')
     parser.add_argument('definition', type=str, help='.yml definition file')
     parser.add_argument('--template', type=str, nargs='+', help='template path - default: xsd, cpp-xmlwrp',
-                        default=['xsd','cpp-xmlwrp'])
+                        default=['xsd', 'cpp-xmlwrp'])
     parser.add_argument('--output', type=str, default='out', help='output path - default: out')
     args = parser.parse_args()
     rv = [config_generator(args.definition, t, args.output) for t in args.template]
     return max(rv) if rv else 1
-
-
-if __name__ == '__main__':
-    try:
-        result = main()
-    except Exception as error:
-        logging.fatal(error)
-        result = 1
-    exit(result)

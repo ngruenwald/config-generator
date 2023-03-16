@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "cgen"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.8"
 authors = [
     { name = "ngruenwald", email = "some@mail.com" }
@@ -24,14 +24,5 @@ dependencies = [
 "Homepage" = "https://github.com/ngruenwald/config-generator"
 
 [tool.hatch.build]
-include = [
-    "*.py",
-]
-artifacts = [
-    "cpp-json/*",
-    "cpp-pugixml/*",
-    "cpp-xmlwrp/*",
-    "doc-html/*",
-    "doc-confluence/*",
-    "xsd/*"
-]
+include = ["*.py"]
+artifacts = ["cgen/templates/*"]

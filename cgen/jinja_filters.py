@@ -1,12 +1,12 @@
-from spec_types import Type
+from .spec_types import Type
 
 
 def case_input_split(input):
-    SEP_C = '_'
-    SEP_L = [' ', '-']
-    for sep in SEP_L:
-        input = input.replace(sep, SEP_C)
-    return input.split(SEP_C)
+    sep_c = '_'
+    sep_l = [' ', '-']
+    for sep in sep_l:
+        input = input.replace(sep, sep_c)
+    return input.split(sep_c)
 
 
 def j2_camel_case(input):
