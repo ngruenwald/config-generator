@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError
-from jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_is_type
+from jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
 
 from spec_types import ArrayType, ObjectType, ObjectField, Type
 from spec_types import Constraint
@@ -261,6 +261,7 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
         env.filters['camel_case'] = j2_camel_case
         env.filters['pascal_case'] = j2_pascal_case
         env.filters['snake_case'] = j2_snake_case
+        env.filters['title_case'] = j2_title_case
         env.filters['base'] = j2_base
         env.tests['Type'] = j2_is_type
 
