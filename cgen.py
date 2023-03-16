@@ -268,8 +268,8 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
         for publish_path in template_config['template']['publish']:
             source_path = Path(template_path) / Path(publish_path)
             target_path = Path(output_path) / Path(publish_path)
-            if os.path.is_dir(source_path):
-                shutil.copytree(source_path, target_path)
+            if os.path.isdir(source_path):
+                shutil.copytree(source_path, target_path, dirs_exist_ok=True)
             else:
                 shutil.copy2(source_path, target_path)
 
