@@ -1,0 +1,54 @@
+<!-- TITLE: {{ info.title }} -->
+<ac:structured-macro ac:macro-id="dea261c6-b686-476f-b849-ef377f5d59e3" ac:name="details" ac:schema-version="1">
+  <ac:parameter ac:name="hidden">true</ac:parameter>
+  <ac:rich-text-body>
+    <p>
+      This content was generated automatically from <i>{{ definition | default('...') }}</i><br/>
+      Please do not edit by hand.
+    </p>
+  </ac:rich-text-body>
+</ac:structured-macro>
+
+{% if info.version | default('') %}
+<p>Version: {{ info.version }}</p>
+{% endif %}
+{% if info.description | default('') %}
+<p>{{ info.description }}</p>
+{% endif %}
+
+{% for k,v in docs.sections.items() %}
+<h2>{{ k | trim('@') | capitalize }}</h2>
+{% if v.description | default('') %}<p>{{ v.description }}</p>{% endif %}
+<table class="relative-table wrapped" style="width: 90%;">
+  <colgroup>
+    <col style="width: 40%;" />
+    <col style="width: 20%;" />
+    <col style="width: 10%;" />
+    <col style="width: 10%;" />
+    <col style="width: 10%;" />
+  </colgroup>
+  <tbody>
+    <tr>
+      <th><strong>XPath</strong></th>
+      <th>Description</th>
+      <th>Required</th>
+      <th>Default</th>
+      <th>Range</th>
+    </tr>
+  {% for row in v %}
+    <tr>
+      <td><strong><code>{{ row.xpath | default('') }}</code></strong></td>
+      <td>{{ row.description | default('') }}</td>
+      {% if row.required -%}
+      <td>yes</td>
+      <td></td>
+      {% else -%}
+      <td></td>
+      <td>{{ row.default | default('') }}</td>
+      {% endif -%}
+      <td>{{ row.range | default('') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endfor %}

@@ -151,6 +151,26 @@ def assign_constraints(types: List[Type], elements: List[Type], constraints: Lis
 #
 
 
+TEMPLATE_DEFAULT_CONFIG = {
+    'template': {
+        'publish': []
+    }
+}
+
+
+def load_template_config(path: str):
+    try:
+        with open(Path(path) / 'template.yml', 'r') as stream:
+            return yaml.safe_load(stream)
+    except FileNotFoundError:
+        return TEMPLATE_DEFAULT_CONFIG
+
+
+#
+#
+#
+
+
 def create_path(path: str):
     if not os.path.isdir(path):
         os.mkdir(path)
@@ -196,6 +216,8 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
         constraints = load_constraints(loader.data)
         assign_constraints(types, elements, constraints)
 
+        template_config = load_template_config(template_path)
+
         render_data = dict()
 
         try:
@@ -207,6 +229,7 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
         except KeyError:
             render_data['options'] = dict()
 
+        render_data['definition'] = definition
         render_data['types'] = types
         render_data['elements'] = elements
 
@@ -218,13 +241,13 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
                     elements]
         )
 
-        docs = render_data['config'].doc('config')
-
         type_names = set([t.name for t in types])
         elem_names = set([e.name for e in elements])
 
         render_data['unique_elements'] = list(elem_names.difference(type_names))
         render_data['unique_types'] = list(type_names.union(elem_names))
+
+        render_data['docs'] = create_render_data(render_data['config'].doc('config'))
 
         file_loader = FileSystemLoader(template_path)
         env = Environment(loader=file_loader)
@@ -242,16 +265,14 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
             if not file_name.startswith('_'):
                 render(env, file_name, output_path, render_data)
 
-        for file_path in glob.glob(os.path.join(os.getcwd(), template_path, '*.hpp')):
-            shutil.copy2(file_path, Path(output_path) / Path(file_path).name)
+        for publish_path in template_config['template']['publish']:
+            source_path = Path(template_path) / Path(publish_path)
+            target_path = Path(output_path) / Path(publish_path)
+            if os.path.isdir(source_path):
+                shutil.copytree(source_path, target_path, dirs_exist_ok=True)
+            else:
+                shutil.copy2(source_path, target_path)
 
-        doc_template_path = Path(template_path).parent.absolute() / "html-doc"
-        file_loader = FileSystemLoader(doc_template_path)
-        env = Environment(loader=file_loader)
-        for file_path in glob.glob(os.path.join(os.getcwd(), doc_template_path, '*.j2')):
-            file_name = os.path.splitext(os.path.basename(file_path))[0]
-            if not file_name.startswith('_'):
-                render(env, file_name, output_path, create_render_data(docs))
         return 0
 
     except TemplateSyntaxError as e:
