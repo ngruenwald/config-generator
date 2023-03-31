@@ -230,7 +230,7 @@
   {%- if t['xml']['type'] | default('sequence') == 'choice' -%}
   <xs:choice minOccurs="{{ t['xml']['min'] | default(1) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
   {%- else -%}
-  <xs:{{ t['xml'][''] | default('sequence') }}>
+  <xs:{{ t['xml']['type'] | default('sequence') }}>
   {%- endif -%}
   {%- filter indent(2) %}
   {% for f in t.fields -%}
