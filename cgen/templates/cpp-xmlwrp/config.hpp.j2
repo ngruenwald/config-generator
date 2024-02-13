@@ -4,6 +4,22 @@
 /// {{ text | default('') | trim | replace('\n', '\n/// ') }}
 {%- endmacro -%}
 
+{%- macro insert_optional_type(member, field) -%}
+{%- if options['cpp'] and options['cpp']['use_optional'] | default(false) -%}
+{%- if not member.required and member.type.default is none %}std::optional<{% endif -%}
+{%- endif -%}
+{{ m.type_name(field) }}
+{%- if options['cpp'] and options['cpp']['use_optional'] | default(false) -%}
+{%- if not member.required and member.type.default is none %}>{% endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro insert_optional_vector(member) -%}
+{#-{%- if not member.required and not member.default %}std::optional<{% endif -%}-#}
+std::vector<{{ m.type_name(member.type.item_type.name) }}>
+{#-{%- if not member.required and not member.default %}>{% endif -%}-#}
+{%- endmacro -%}
+
 {#-
   Renders forward delcarations for types
   @param types         List of types [objects]
@@ -97,15 +113,15 @@ struct {{ m.type_case(type.name) }}
 {%- endif %}
 struct {{ m.type_case(member.type.name) }} {{ m.value_case(member.name) }};
 {%- elif member.type.type == 'array' or member.type.type == 'list' %}
-std::vector<{{ m.type_name(member.type.item_type.name) }}> {{ m.value_case(member.name) }};
+{{ insert_optional_vector(member) }} {{ m.value_case(member.name) }};
 {%- elif member.type.type == 'enum' %}
   {%- if member.type.base_type == 'string' %}
-{{ m.type_name(member.type.name) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
+{{ insert_optional_type(member, member.type.name) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
   {%- else %}
-{{ m.type_name(member.type.base_type) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
+{{ insert_optional_type(member, member.type.base_type) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
   {%- endif -%}
 {%- else %}
-{{ m.type_name(member.type.type) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
+{{ insert_optional_type(member, member.type.type) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
 {%- endif -%}
 {%- endmacro -%}
 

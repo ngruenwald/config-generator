@@ -12,6 +12,7 @@ info:
   title: my_fancy_config
   description: This is a fancy configuration.
 ```
+
 The _info_ block contains model specific information,
 which can be used in templates.
 
@@ -25,13 +26,16 @@ options:
       - my
       - fancy
       - config
+    use_optional: True
 ```
+
 The _options_ block contains generic options.
 
 The generated files are named after their template files.
 With the _output_prefix_ a custom prefix can be added to the generated filenames.
 
-The _cpp_ options allow to specify custom _namespaces_.
+The _cpp_ options allow to specify custom _namespaces_ and controls the use
+of std::optional for non-required fields that do not have a default value.
 
 #### elements
 
