@@ -157,6 +157,8 @@ struct {{ m.type_case(member.type.name) }} {{ m.value_case(member.name) }};
 
 #include <cstdint>
 #include <memory>
+{% if options['cpp'] and options['cpp']['use_optional'] | default(false) %}#include <optional>
+{% endif -%}
 #include <string>
 #include <vector>
 
