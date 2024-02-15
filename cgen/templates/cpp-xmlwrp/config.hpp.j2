@@ -14,6 +14,14 @@
 {%- endif -%}
 {%- endmacro -%}
 
+{%- macro insert_optional_struct(member) -%}
+{%- if options['cpp'] and options['cpp']['use_optional'] | default(false) and not member.required -%}
+std::optional<{{ m.type_case(member.type.name) }}> {{ m.value_case(member.name) }}
+{%- else -%}
+{{ m.type_case(member.type.name) }} {{ m.value_case(member.name) }}
+{%- endif -%}
+{%- endmacro -%}
+
 {%- macro insert_optional_vector(member) -%}
 {#-{%- if not member.required and not member.default %}std::optional<{% endif -%}-#}
 std::vector<{{ m.type_name(member.type.item_type.name) }}>
@@ -111,7 +119,7 @@ struct {{ m.type_case(type.name) }}
 {%- if not member.type.name in unique_types -%}
 {{ insert_struct(member) }}
 {%- endif %}
-struct {{ m.type_case(member.type.name) }} {{ m.value_case(member.name) }};
+{{ insert_optional_struct(member) }};
 {%- elif member.type.type == 'array' or member.type.type == 'list' %}
 {{ insert_optional_vector(member) }} {{ m.value_case(member.name) }};
 {%- elif member.type.type == 'enum' %}
