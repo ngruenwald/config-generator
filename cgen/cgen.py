@@ -201,7 +201,7 @@ def render(env: Environment, template_file: str, output_path: str, data):
 #
 
 
-def config_generator(definition: str, template_path: str, output_path: str) -> int:
+def config_generator(definition: str, template_path: str, output_path: str, input_path: str) -> int:
     try:
         logging.info(f'processing template "{template_path}"')
 
@@ -210,7 +210,7 @@ def config_generator(definition: str, template_path: str, output_path: str) -> i
             raise FileNotFoundError('template path not found')
 
         loader = Loader()
-        loader.search_paths = ['definition']  # TODO: config
+        loader.search_paths = ["definition", input_path]  # TODO: config
         loader.load(definition)
 
         types = load_types(loader.data, 'types')
@@ -309,6 +309,7 @@ def cgen() -> int:
     parser.add_argument('--template', type=str, nargs='+', help='template path - default: xsd, cpp-xmlwrp',
                         default=['xsd', 'cpp-xmlwrp'])
     parser.add_argument('--output', type=str, default='out', help='output path - default: out')
+    parser.add_argument('--input', type=str, default='', help='input path')
     args = parser.parse_args()
-    rv = [config_generator(args.definition, t, args.output) for t in args.template]
+    rv = [config_generator(args.definition, t, args.output, args.input) for t in args.template]
     return max(rv) if rv else 1
