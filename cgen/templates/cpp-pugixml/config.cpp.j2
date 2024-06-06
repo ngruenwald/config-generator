@@ -1,6 +1,19 @@
 {%- import '_macros.j2' as m -%}
 
 {#-
+  Renders forward declarations for load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro forward_declarations(types, unique_types) -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types -%}
+struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(const xml::Node& node);
+{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#-
   Renders a list of load functions
   @param types         List of types [objects]
   @param unique_types  List of unique type names [strings]
@@ -21,31 +34,40 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 {
     struct {{ m.type_case(type.name) }} config;
 {% filter indent(4) %}
-{{ load_fields('config.', type.fields) }}
+{{ load_fields('config.', type.fields, True) }}
 {%- endfilter %}
     return config;
 }
 {%- endmacro -%}
 
-{%- macro load_fields(prefix, fields) -%}
+{%- macro load_fields(prefix, fields, as_attr) -%}
 {%- for field in fields -%}
-{{ load_field(prefix, field) }}
+{{ load_field(prefix, field, as_attr) }}
 {% endfor -%}
 {%- endmacro -%}
 
-{%- macro load_field(prefix, field) -%}
+{%- macro load_field(prefix, field, as_attr) -%}
 {% if field.required %}XML_MANDATORY({% else %}XML_OPTIONAL({% endif -%}
 {{ prefix }}{{ m.value_case(field.name) }} =
 {%- if field.type.type in ['object'] %} Load{{ m.type_case(field.type.name) }}(get_child(node, "{{ field.type.alias }}"))
-{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_case(field.type.item_type.name) }}>(node, "{{ field.type.alias }}", Load{{ m.type_case(field.type.item_type.name) }})
+{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_name(m.get_type(field.type.item_type)) }}>(get_child(node, "{{ field.type.alias }}"), "{{ field.type.item_name }}", Load{{ m.type_case(m.get_type(field.type.item_type)) }})
+{%- elif field.type.type in ['dict', 'dictionary', 'map'] %} (load_dict<{{ m.type_name(m.get_type(field.type.key_type)) }}, {{ m.type_name(m.get_type(field.type.value_type)) }}>(get_child(node, "{{ field.type.alias }}"), "entry", Load{{ m.type_case(m.get_type(field.type.key_type)) }}, Load{{ m.type_case(m.get_type(field.type.value_type)) }}))
 {%- elif field.type.type in ['enum'] %}
   {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(node, "{{ field.type.alias }}")
-  {%- else %} from_string<{{ m.type_name(field.type.base_type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- else -%}
+  {%- if as_attr %} from_string<{{ m.type_name(field.type.base_type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- else %} from_string<{{ m.type_name(field.type_base_type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
   {%- endif %}
-{%- else %} from_string<{{ m.type_name(field.type.type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- endif %}
+{%- else -%}
+  {%- if as_attr %} from_string<{{ m.type_name(field.type.type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- else %} from_string<{{ m.type_name(field.type.type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- endif %}
 {%- endif -%}
 );
 {%- endmacro -%}
+
+// This file has been generated. Do not modify.
 
 #include <functional>
 #include <iostream>
@@ -119,12 +141,61 @@ std::vector<T> load_array(
     std::function<T(const pugi::xml_node&)> f)
 {
     std::vector<T> v;
-    for (const auto& child : node.child(name))
+    for (const auto& child : node.children(name))
     {
         v.push_back(f(child));
     }
     return v;
 }
+
+template<typename K, typename V>
+std::map<K,V> load_dict(
+    const pugi::xml_node& node,
+    const char* name,
+    std::function<K(const pugi::xml_node&)> fk,
+    std::function<V(const pugi::xml_node&)> fv)
+{
+    std::map<K,V> m;
+    for (const auto& child : node.children(name))
+    {
+        auto key = fk(child.child("key"));
+        auto val = fv(child.child("value"));
+        m.insert(std::make_pair(key, val));
+    }
+    return m;
+}
+
+inline int LoadInt(
+    const pugi::xml_node& node)
+{
+    return from_string<int>(node.child_value());
+}
+
+inline float LoadFloat(
+    const pugi::xml_node& node)
+{
+    return from_string<float>(node.child_value());
+}
+
+inline double LoadDouble(
+    const pugi::xml_node& node)
+{
+    return from_string<double>(node.child_value());
+}
+
+inline bool LoadBool(
+    const pugi::xml_node& node)
+{
+    return from_string<bool>(node.child_value());
+}
+
+inline std::string LoadString(
+    const pugi::xml_node& node)
+{
+    return node.child_value();
+}
+
+// TODO: implement standard types
 
 {% if types -%}
 {{ load_functions(types, unique_types) }}
@@ -133,7 +204,7 @@ std::vector<T> load_array(
 {{ load_functions(elements, unique_elements) }}
 {%- endif -%}
 
-struct std::unique_ptr<Config> LoadConfig(
+std::unique_ptr<Config> LoadConfig(
     const std::string& configPath)
 {
 {%- if elements %}
@@ -156,7 +227,7 @@ struct std::unique_ptr<Config> LoadConfig(
         auto config = std::make_unique<struct Config>();
 
         {% filter indent(8) -%}
-        {{ load_fields('config->', config.fields) }}
+        {{ load_fields('config->', config.fields, False) }}
         {%- endfilter %}
         return config;
     }

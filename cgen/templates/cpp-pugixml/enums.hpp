@@ -65,9 +65,9 @@ template<typename T> constexpr size_t enum_size() { return 0; }
     }}}                                                                        \
     enum class NAME { ___ENUM_VALUES(VALUES) };                                \
     inline const char* to_string(NAME e) {                                     \
-        return enums::details::NAME::strings[static_cast<int>(e)]; }           \
+        return enums::details::NAME::strings[static_cast<size_t>(e)]; }        \
     inline bool from_string(const char* s, NAME& e) {                          \
-        for (auto n = 0; n < enums::details::NAME::enum_size; n++) {           \
+        for (size_t n = 0; n < enums::details::NAME::enum_size; n++) {         \
             if (strcmp(s, enums::details::NAME::strings[n]) == 0) {            \
                 e = static_cast<NAME>(n); return true; } }                     \
         e = static_cast<NAME>(enums::details::NAME::enum_size-1);              \

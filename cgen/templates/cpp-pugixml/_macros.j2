@@ -10,6 +10,17 @@
 {{ n | pascal_case }}
 {%- endmacro -%}
 
+{%- macro get_type(m) -%}
+  {%- if m.type in ['string'] %}string
+  {%- elif m.type in ['int', 'integer', 'number'] %}int
+  {%- elif m.type in ['uint', 'unsigned'] %}uint
+  {%- elif m.type in ['bool', 'boolean'] %}bool
+  {%- elif m.type in ['float'] %}float
+  {%- elif m.type in ['double'] %}double
+  {%- else %}{{ m.name }}
+  {%- endif -%}
+{%- endmacro -%}
+
 {%- macro type_name(tn) -%}
 {%- if tn -%}
   {%- if tn in ['string'] %}std::string
