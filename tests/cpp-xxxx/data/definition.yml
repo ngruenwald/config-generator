@@ -1,0 +1,183 @@
+info:
+  version: 1.0
+  title: my_fancy_config
+  description: This is a fancy configuration
+
+options:
+  cpp:
+    use_optional: True
+
+elements:
+  types:
+    $ref: '#/types/many-types'
+    required: True
+
+  an_integer:
+    type: integer
+    required: True
+
+  an_unsigned:
+    type: unsigned
+    reqired: True
+
+  a_string:
+    type: string
+    required: True
+
+  a_float:
+    type: float
+    required: True
+
+  a_double:
+    type: double
+    required: True
+
+  a_bool:
+    type: bool
+    required: True
+
+  an_array:
+    type: array
+    items:
+      type: int
+    required: True
+
+  a_dictionary:
+    type: dictionary
+    keys:
+      type: string
+    values:
+      type: string
+    required: True
+
+types:
+  many-types:
+    type: object
+    properties:
+      # mandatory
+      am:
+        type: int
+      bm:
+        type: integer
+      cm:
+        type: number
+      dm:
+        type: uint
+      em:
+        type: unsigned
+      fm:
+        type: string
+      gm:
+        type: float
+      hm:
+        type: double
+      im:
+        type: bool
+      jm:
+        type: boolean
+      km:
+        type: array
+        items:
+          type: integer
+        itemName: item
+      lm:
+        type: list
+        items:
+          type: string
+      mm:
+        $ref: '#/types/simple-object'
+      nm:
+        type: dict  # dict / dictionary / map
+        keys:
+          type: string
+        values:
+          type: string
+      om:
+        type: array
+        items:
+          $ref: '#/types/simple-object'
+      pm:
+        type: dict
+        keys:
+          type: int
+        values:
+          $ref: '#/types/simple-object'
+      # optional
+      ao:
+        type: int
+      bo:
+        type: integer
+      co:
+        type: number
+      do:
+        type: uint
+      eo:
+        type: unsigned
+      fo:
+        type: string
+      go:
+        type: float
+      ho:
+        type: double
+      io:
+        type: bool
+      jo:
+        type: boolean
+      ko:
+        type: array
+        items:
+          type: integer
+      lo:
+        type: list
+        items:
+          type: string
+      mo:
+        $ref: '#/types/simple-object'
+      noo:
+        type: dict
+        keys:
+          type: string
+        values:
+          type: string
+    required:
+      - am
+      - bm
+      - cm
+      - dm
+      - em
+      - fm
+      - gm
+      - hm
+      - im
+      - jm
+      - km
+      - lm
+      - mm
+      - nm
+      - om
+      - pm
+
+  simple-object:
+    type: object
+    properties:
+      am:
+        type: int
+    required:
+      - am
+
+  # bar-type:
+  #   type: object
+  #   properties:
+  #     gup:
+  #       type: string
+  #     bop:
+  #       type: int
+  #     hop:
+  #       $ref: '#/types/float-array'
+  #   required:
+  #     - bop
+
+  # float-array:
+  #   type: array
+  #   items:
+  #     type: float
