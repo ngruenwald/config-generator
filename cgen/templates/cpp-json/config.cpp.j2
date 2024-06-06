@@ -36,6 +36,8 @@ static void from_json(
 {%- macro load_required_field(field) -%}
 {%- if field.type.type in ['object', 'array', 'list'] -%}
 j.at("{{ field.type.alias }}").get_to(v.{{ m.value_case(field.name) }});
+{%- elif field.type.type in ['dict', 'dictionary', 'map'] -%}
+load_map(j.at("{{ field.type.alias }}"), v.{{ m.value_case(field.name) }});
 {%- elif field.type.type == 'enum' and field.type.base_type == 'string' -%}
 {
     get_enum(j, v.{{ m.value_case(field.name) }}, "{{ field.type.alias }}");
@@ -51,6 +53,26 @@ j.at("{{ field.name }}").get_to(v.{{ m.value_case(field.name) }});
 {%- endif -%}
 {%- endmacro -%}
 
+{#
+  Get the type of an optional field
+#}
+{%- macro get_optional_type(member) -%}
+{%- if member.type.type == 'object' -%}
+{{ m.type_case(member.type.name) }}
+{%- elif member.type.type == 'array' or member.type.type == 'list' -%}
+std::vector<{{ m.type_name(m.get_type(member.type.item_type)) }}>
+{%- elif member.type.type == 'dict' or member.type.type == 'dictionary' or member.type.type == 'map' -%}
+std::map<{{ m.type_name(m.get_type(member.type.key_type)) }}, {{ m.type_name(m.get_type(member.type.value_type)) }}>
+{%- elif member.type.type == 'enum' -%}
+  {%- if member.type.base_type == 'string' -%}
+{{ m.type_name(member.type.name) }}
+  {%- else -%}
+{{ m.type_name(member.type.base_type) }}
+  {%- endif -%}
+{%- else -%}
+{{ m.type_name(member.type.type) }}
+{%- endif -%}
+{%- endmacro -%}
 
 {#
   Load an optional field
@@ -60,7 +82,13 @@ j.at("{{ field.name }}").get_to(v.{{ m.value_case(field.name) }});
 {%- if field.type.type in ['object', 'array', 'list'] -%}
 if (j.contains("{{ field.type.alias }}"))
 {
+  {%- if options['cpp'] and options['cpp']['use_optional'] | default(false) %}
+    {{ get_optional_type(field) }} tmp;
+    j.at("{{ field.type.alias }}").get_to(tmp);
+    v.{{ m.value_case(field.name) }} = tmp;
+  {%- else %}
     j.at("{{ field.type.alias }}").get_to(v.{{ m.value_case(field.name) }});
+  {%- endif %}
 }
 {%- elif field.type.type == 'enum' and field.type.base_type == 'string' -%}
 if (j.contains("{{ field.type.alias }}"))
@@ -77,11 +105,18 @@ if (j.contains("{{ field.name }}"))
 {%- else -%}
 if (j.contains("{{ field.name }}"))
 {
-    j.at("{{ field.name }}").get_to(v.{{ m.value_case(field.name) }});
+  {%- if options['cpp'] and options['cpp']['use_optional'] | default(false) %}
+    {{ get_optional_type(field) }} tmp;
+    j.at("{{ field.type.alias }}").get_to(tmp);
+    v.{{ m.value_case(field.name) }} = tmp;
+  {%- else %}
+    j.at("{{ field.type.alias }}").get_to(v.{{ m.value_case(field.name) }});
+  {%- endif %}
 }
 {%- endif -%}
 {%- endmacro -%}
 
+// This file has been generated. Do not modify.
 
 #include <functional>
 #include <iostream>
@@ -114,6 +149,16 @@ void get_enum(
     }
 }
 
+template<typename K, typename V>
+void load_map(
+    const nlohmann::json& j,
+    std::map<K, V>& m)
+{
+    for (const auto& [key, value] : j.items())
+    {
+        m[from_string<K>(key)] = value;
+    }
+}
 {% if types -%}
 {{ load_functions(types, unique_types) }}
 {%- endif -%}
@@ -146,7 +191,7 @@ struct std::unique_ptr<Config> LoadConfig(
         }
 
         auto j = nlohmann::json::parse(ifs, nullptr, true, true);
-        
+
         auto config = std::make_unique<struct Config>();
         from_json(j, *config);
 
