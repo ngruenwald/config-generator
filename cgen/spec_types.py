@@ -178,6 +178,55 @@ class ArrayType(Type):
             return [DocEntry(xpath, self.description, True if self.minsize else False, default)]
 
 
+class DictionaryType(Type):
+    def __init__(self, name: str, type_: str, key_type: Type, value_type: Type, description: str = None, defv: Dict = None):
+        super().__init__(name, type_, description)
+        self.key_type = key_type
+        self.value_type = value_type
+        self.default = defv
+
+    def __str__(self):
+        return f'DictionaryType{{name={self.name},type={self.type},alias={self.alias}}}'
+
+    @staticmethod
+    def create(data: Dict, name: str, props: Dict):
+        key_type = None
+        if 'type' in props['keys']:
+            key_type = load_type(data, 'type', props['keys'])
+        elif '$ref' in props['keys']:
+            key_type = load_ref_type(data, 'keys', props['keys'])
+
+        # if 'keys' in props:
+        #     key_type = load_type(data, 'keys', props['keys'])
+        # elif '$ref' in props:
+        #     key_type = load_ref_type(data, 'keys', props)
+
+        value_type = None
+        if 'values' in props:
+            value_type = load_type(data, 'values', props['values'])
+        elif '$ref' in props:
+            value_type = load_ref_type(data, 'values', props)
+
+        return DictionaryType(
+            name=name,
+            type_=props.get('type', 'dict'),
+            key_type=key_type,
+            value_type=value_type,
+            description=props.get('description', ''),
+            defv=props.get('default', None)
+        )
+
+    def doc(self, root) -> List[DocEntry]:
+        # TODO: what is this, and how can we make this work for dictionaries?
+        doc_ = getattr(self.value_type, 'doc', None)
+        if callable(doc_):
+            return doc_(f"{root}")
+        else:
+            xpath = f"{root}/@{self.name}"
+            default = self.value_type.default if hasattr(self.value_type, 'default') else ""
+            return [DocEntry(xpath, self.description, False, default)]
+
+
 class ObjectField:
     def __init__(self, name: str, type_: Type, description: str = None,
                  required: bool = False):
@@ -289,6 +338,9 @@ def load_type_(data: Dict, name: str, props: Dict) -> Optional[Type]:
         if props['type'] in ['array', 'list']:
             return ArrayType.create(data, name, props)
 
+        if props['type'] in ['dict', 'dictionary', 'map']:
+            return DictionaryType.create(data, name, props)
+
         if props['type'] in ['object']:
             return ObjectType.create(data, name, props)
 
@@ -341,6 +393,10 @@ def load_ref_type(data: Dict, name: str, props: Dict) -> Type:
         t.default = props.get('default', t.default)
         t.minsize = props.get('min', t.minsize)
         t.maxsize = props.get('max', t.maxsize)
+
+    if isinstance(t, DictionaryType):
+        t.description = props.get('description', t.description)
+        t.default = props.get('default', t.default)
 
     if isinstance(t, ObjectType):
         t.description = props.get('description', t.description)

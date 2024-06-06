@@ -224,6 +224,28 @@ manymorethings:
   maxItems: 10
 ```
 
+#### Dictionaries
+
+type names:
+* dict
+* dictionary
+* map
+
+properties:
+* keys    ... type declaration of keys (can contain $ref)
+* values  ... type declaration of values (can contain $ref)
+
+Either _items_ or _$ref_ must be present.
+
+```yaml
+mappings:
+  type: dictionary
+  keys:
+    type: string
+  values:
+    $ref: '#/types/something'
+```
+
 ### Objects
 
 type names:

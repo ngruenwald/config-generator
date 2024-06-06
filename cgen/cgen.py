@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 
 from .doc import create_render_data
 from .jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
-from .spec_types import ArrayType, ObjectType, ObjectField, Type
+from .spec_types import ArrayType, DictionaryType, ObjectType, ObjectField, Type
 from .spec_types import Constraint
 from .spec_types import load_type, load_constraints
 
@@ -74,6 +74,9 @@ def sort_type(types: List[Type], current: Type) -> List[Type]:
     if isinstance(current, ArrayType):
         sorted_.extend(sort_type(types, current.item_type))
         # sorted.append(current)
+    elif isinstance(current, DictionaryType):
+        sorted_.extend(sort_type(types, current.key_type))
+        sorted_.extend(sort_type(types, current.value_type))
     elif isinstance(current, ObjectType):
         for field in current.fields:
             sorted_.extend(sort_type(types, field.type))
