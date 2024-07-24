@@ -138,6 +138,20 @@ namespace config {
 template<typename T>
 void get_enum(
     const nlohmann::json& j,
+    std::optional<T>& v,
+    const char* name)
+{
+    if (j.at(name))
+    {
+        T e;
+        get_enum(j, e, name);
+        v = e;
+    }
+}
+
+template<typename T>
+void get_enum(
+    const nlohmann::json& j,
     T& v,
     const char* name)
 {
