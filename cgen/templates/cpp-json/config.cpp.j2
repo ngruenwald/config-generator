@@ -125,7 +125,6 @@ if (j.contains("{{ field.name }}"))
 #include <nlohmann/json.hpp>
 
 #include "{{ options['output_prefix'] | default('') }}config.hpp"
-#include "from_string.hpp"
 
 {% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
 {%- for namespace in options['cpp']['namespaces'] %}
@@ -134,6 +133,8 @@ namespace {{ namespace }} {
 {%- else %}
 namespace config {
 {%- endif %}
+
+#include "from_string.hpp"
 
 template<typename T>
 void get_enum(
