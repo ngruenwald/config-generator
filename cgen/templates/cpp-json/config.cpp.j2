@@ -141,7 +141,7 @@ void get_enum(
     std::optional<T>& v,
     const char* name)
 {
-    if (j.at(name))
+    if (j.contains(name))
     {
         T e;
         get_enum(j, e, name);
