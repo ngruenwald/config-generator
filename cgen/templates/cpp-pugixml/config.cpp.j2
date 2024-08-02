@@ -55,13 +55,13 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 {%- elif field.type.type in ['enum'] %}
   {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(node, "{{ field.type.alias }}")
   {%- else -%}
-  {%- if as_attr %} from_string<{{ m.type_name(field.type.base_type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
-  {%- else %} from_string<{{ m.type_name(field.type_base_type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- if as_attr %} config::from_string<{{ m.type_name(field.type.base_type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- else %} config::from_string<{{ m.type_name(field.type_base_type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
   {%- endif %}
   {%- endif %}
 {%- else -%}
-  {%- if as_attr %} from_string<{{ m.type_name(field.type.type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
-  {%- else %} from_string<{{ m.type_name(field.type.type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- if as_attr %} config::from_string<{{ m.type_name(field.type.type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- else %} config::from_string<{{ m.type_name(field.type.type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
   {%- endif %}
 {%- endif -%}
 );
@@ -75,7 +75,6 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 #include <pugixml.hpp>
 
 #include "{{ options['output_prefix'] | default('') }}config.hpp"
-#include "from_string.hpp"
 
 
 #define XML_MANDATORY(x) try { x; } catch (...) { throw; }
@@ -88,6 +87,8 @@ namespace {{ namespace }} {
 {%- else %}
 namespace config {
 {%- endif %}
+
+#include "from_string.hpp"
 
 static pugi::xml_node get_child(
     const pugi::xml_node& node,
@@ -127,7 +128,7 @@ E load_enum(
     const char* attr)
 {
     E e;
-    if (!from_string(get_attr(node, attr).value(), e))
+    if (!config::from_string(get_attr(node, attr).value(), e))
     {
         throw std::invalid_argument("invalid enum value");
     }
@@ -168,25 +169,25 @@ std::map<K,V> load_dict(
 inline int LoadInt(
     const pugi::xml_node& node)
 {
-    return from_string<int>(node.child_value());
+    return config::from_string<int>(node.child_value());
 }
 
 inline float LoadFloat(
     const pugi::xml_node& node)
 {
-    return from_string<float>(node.child_value());
+    return config::from_string<float>(node.child_value());
 }
 
 inline double LoadDouble(
     const pugi::xml_node& node)
 {
-    return from_string<double>(node.child_value());
+    return config::from_string<double>(node.child_value());
 }
 
 inline bool LoadBool(
     const pugi::xml_node& node)
 {
-    return from_string<bool>(node.child_value());
+    return config::from_string<bool>(node.child_value());
 }
 
 inline std::string LoadString(

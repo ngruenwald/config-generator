@@ -158,7 +158,7 @@ void get_enum(
 {
     std::string tmp;
     j.at(name).get_to(tmp);
-    if (!from_string(tmp.c_str(), v))
+    if (!config::from_string(tmp.c_str(), v))
     {
         throw std::invalid_argument("invalid enum value");
     }
@@ -171,7 +171,7 @@ void load_map(
 {
     for (const auto& [key, value] : j.items())
     {
-        m[from_string<K>(key)] = value;
+        m[config::from_string<K>(key)] = value;
     }
 }
 {% if types -%}

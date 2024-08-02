@@ -54,9 +54,9 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 {%- elif field.type.type in ['dict', 'dictionary', 'map'] %} load_dict<{{ m.type_name(m.get_type(field.type.key_type)) }}, {{ m.type_name(m.get_type(field.type.value_type)) }}>(node["{{ field.type.alias }}"], "item", Load{{ m.type_case(m.get_type(field.type.key_type)) }}, Load{{ m.type_case(m.get_type(field.type.value_type)) }})
 {%- elif field.type.type in ['enum'] %}
   {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(node, "{{ field.type.alias }}")
-  {%- else %} from_string<{{ m.type_name(field.type.base_type) }}>(node["{{ field.name }}"].as<std::string>(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- else %} config::from_string<{{ m.type_name(field.type.base_type) }}>(node["{{ field.name }}"].as<std::string>(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
   {%- endif %}
-{%- else %} from_string<{{ m.type_name(field.type.type) }}>(node["{{ field.name }}"].as<std::string>(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+{%- else %} config::from_string<{{ m.type_name(field.type.type) }}>(node["{{ field.name }}"].as<std::string>(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
 {%- endif -%}
 ));
 {%- endmacro -%}
@@ -70,7 +70,6 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 #include <yaml-cpp/yaml.h>
 
 #include "{{ options['output_prefix'] | default('') }}config.hpp"
-#include "from_string.hpp"
 
 
 #define YAML_MANDATORY(x) try { x; } catch (...) { throw; }
@@ -84,13 +83,15 @@ namespace {{ namespace }} {
 namespace config {
 {%- endif %}
 
+#include "from_string.hpp"
+
 template<typename E>
 E load_enum(
     const YAML::Node& node,
     const char* attr)
 {
     E e;
-    if (!from_string(node[attr].as<std::string>().c_str(), e))
+    if (!config::from_string(node[attr].as<std::string>().c_str(), e))
     {
         throw std::invalid_argument("invalid enum value");
     }
