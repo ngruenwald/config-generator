@@ -24,7 +24,13 @@ std::optional<{{ m.type_case(member.type.name) }}> {{ m.value_case(member.name) 
 
 {%- macro insert_optional_vector(member) -%}
 {#-{%- if not member.required and not member.default %}std::optional<{% endif -%}-#}
-std::vector<{{ m.type_name(member.type.item_type.name) }}>
+std::vector<{{ m.type_name(m.get_type(member.type.item_type)) }}>
+{#-{%- if not member.required and not member.default %}>{% endif -%}-#}
+{%- endmacro -%}
+
+{%- macro insert_optional_map(member) -%}
+{#-{%- if not member.required and not member.default %}std::optional<{% endif -%}-#}
+std::map<{{ m.type_name(m.get_type(member.type.key_type)) }}, {{ m.type_name(m.get_type(member.type.value_type)) }}>
 {#-{%- if not member.required and not member.default %}>{% endif -%}-#}
 {%- endmacro -%}
 
@@ -122,6 +128,8 @@ struct {{ m.type_case(type.name) }}
 {{ insert_optional_struct(member) }};
 {%- elif member.type.type == 'array' or member.type.type == 'list' %}
 {{ insert_optional_vector(member) }} {{ m.value_case(member.name) }};
+{%- elif member.type.type == 'dict' or member.type.type == 'dictionary' or member.type.type == 'map' %}
+{{ insert_optional_map(member) }} {{ m.value_case(member.name) }};
 {%- elif member.type.type == 'enum' %}
   {%- if member.type.base_type == 'string' %}
 {{ insert_optional_type(member, member.type.name) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
@@ -164,6 +172,7 @@ struct {{ m.type_case(type.name) }}
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 {% if options['cpp'] and options['cpp']['use_optional'] | default(false) %}#include <optional>
 {% endif -%}
@@ -179,7 +188,6 @@ namespace {{ namespace }} {
 namespace config {
 {%- endif %}
 {% if types -%}
-{# {{ forward_declarations(types, unique_types) }} #}
 {{ insert_enums(types, unique_types) }}
 {{ insert_structs(types, unique_types) }}
 {%- endif -%}
@@ -189,7 +197,7 @@ namespace config {
 /// Loads the configuration from file
 /// @param[in] configPath Location of the configuration file
 /// @returns Configuration structure via unique pointer
-struct std::unique_ptr<Config> LoadConfig(
+std::unique_ptr<Config> LoadConfig(
     const std::string& configPath);
 
 /// Validates the configuration file against the internal schema

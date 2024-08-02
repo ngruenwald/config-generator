@@ -50,7 +50,8 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 {% if field.required %}XML_MANDATORY({% else %}XML_OPTIONAL({% endif -%}
 {{ prefix }}{{ m.value_case(field.name) }} =
 {%- if field.type.type in ['object'] %} Load{{ m.type_case(field.type.name) }}(node.GetChild("{{ field.type.alias }}"))
-{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_case(field.type.item_type.name) }}>(node, "{{ field.type.alias }}", Load{{ m.type_case(field.type.item_type.name) }})
+{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_name(m.get_type(field.type.item_type)) }}>(node, "{{ field.type.alias }}", Load{{ m.type_case(m.get_type(field.type.item_type)) }})
+{%- elif field.type.type in ['dict', 'dictionary', 'map'] %} load_dict<{{ m.type_name(m.get_type(field.type.key_type)) }}, {{ m.type_name(m.get_type(field.type.value_type)) }}>(node.GetChild("{{ field.type.alias }}"), "item", Load{{ m.type_case(m.get_type(field.type.key_type)) }}, Load{{ m.type_case(m.get_type(field.type.value_type)) }})
 {%- elif field.type.type in ['enum'] %}
   {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(node, "{{ field.type.alias }}")
   {%- else %} from_string<{{ m.type_name(field.type.base_type) }}>(node.GetStringProp("{{ field.name }}"){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
@@ -118,8 +119,29 @@ std::vector<T> load_array(
     return v;
 }
 
+template<typename K, typename V>
+std::map<K,V> load_dict(
+    const xml::Node& node,
+    const char* name,
+    std::function<T(const xml::Node&)> f)
+{
+    std::map<K,V> m;
+    for (const auto& child : node.GetChildren(name))
+    {
+        auto [key, value] = f(child);
+        m[key] = value;
+    }
+}
+
+static std::string LoadString(
+    const xml::Node& node)
+{
+    return node.GetStringVal();
+}
+
+// TODO: implement standard types
+
 {% if types -%}
-{#-{{ forward_declarations(types, unique_types) }}-#}
 {{ load_functions(types, unique_types) }}
 {%- endif -%}
 {%- if elements -%}
@@ -160,7 +182,7 @@ bool ValidateConfig(
     return false;
 }
 
-struct std::unique_ptr<Config> LoadConfig(
+std::unique_ptr<Config> LoadConfig(
     const std::string& configPath)
 {
 {%- if elements %}
