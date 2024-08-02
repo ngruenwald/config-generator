@@ -1,0 +1,142 @@
+{%- macro type_case(n) -%}
+{{ n | pascal_case }}
+{%- endmacro -%}
+
+{%- macro value_case(n) -%}
+{{ reserved(n | snake_case) }}
+{%- endmacro -%}
+
+{%- macro enum_case(n) -%}
+{{ n | pascal_case }}
+{%- endmacro -%}
+
+{%- macro get_type(m) -%}
+  {%- if m.type in ['string'] %}string
+  {%- elif m.type in ['int', 'integer', 'number'] %}int
+  {%- elif m.type in ['uint', 'unsigned'] %}uint
+  {%- elif m.type in ['bool', 'boolean'] %}bool
+  {%- elif m.type in ['float'] %}float
+  {%- elif m.type in ['double'] %}double
+  {%- else %}{{ m.name }}
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro type_name(tn) -%}
+{%- if tn -%}
+  {%- if tn in ['string'] %}std::string
+  {%- elif tn in ['int', 'integer', 'number'] %}int
+  {%- elif tn in ['uint', 'unsigned'] %}unsigned int
+  {%- elif tn in ['bool', 'boolean'] %}bool
+  {%- elif tn in ['float'] %}float
+  {%- elif tn in ['double'] %}double
+  {%- else %}{{ type_case(tn) }}
+  {%- endif -%}
+{%- else -%}
+    /* no tn */
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro reserved(n) -%}
+{%- if n in [
+              'alignas',
+              'alignof',
+              'and',
+              'and_eq',
+              'asm',
+              'atomic_cancel',
+              'atomic_commit',
+              'atomic_noexcept',
+              'auto',
+              'bitand',
+              'bitor',
+              'bool',
+              'break',
+              'case',
+              'catch',
+              'char',
+              'char8_t',
+              'char16_t',
+              'char32_t',
+              'class',
+              'compl',
+              'concept',
+              'const',
+              'consteval',
+              'constexpr',
+              'constinit',
+              'const_cast',
+              'continue',
+              'co_await',
+              'co_return',
+              'co_yield',
+              'decltype',
+              'default',
+              'delete',
+              'do',
+              'double',
+              'dynamic_cast',
+              'else',
+              'enum',
+              'explicit',
+              'export',
+              'extern',
+              'false',
+              'float',
+              'for',
+              'friend',
+              'goto',
+              'if',
+              'inline',
+              'int',
+              'long',
+              'mutable',
+              'namespace',
+              'new',
+              'noexcept',
+              'not',
+              'not_eq',
+              'nullptr',
+              'operator',
+              'or',
+              'or_eq',
+              'private',
+              'protected',
+              'public',
+              'reflexpr',
+              'register',
+              'reinterpret_cast',
+              'requires',
+              'return',
+              'short',
+              'signed',
+              'sizeof',
+              'static',
+              'static_assert',
+              'static_cast',
+              'struct',
+              'switch',
+              'synchronized',
+              'template',
+              'this',
+              'thread_local',
+              'throw',
+              'true',
+              'try',
+              'typedef',
+              'typeid',
+              'typename',
+              'union',
+              'unsigned',
+              'using',
+              'virtual',
+              'void',
+              'volatile',
+              'wchar_t',
+              'while',
+              'xor',
+              'xor_eq'
+    ] -%}
+_
+{%- endif -%}
+{{ n }}
+{%- endmacro -%}

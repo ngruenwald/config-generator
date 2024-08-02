@@ -1,0 +1,176 @@
+{%- import '_macros.j2' as m -%}
+
+{#-
+  Renders forward declarations for load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro forward_declarations(types, unique_types) -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types -%}
+struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(const toml::value& value);
+{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#-
+  Renders a list of load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro load_functions(types, unique_types) -%}
+{%- if types -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types %}
+{{ load_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro load_function(type) -%}
+static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
+    const toml::value& value)
+{
+    struct {{ m.type_case(type.name) }} config;
+{% filter indent(4) %}
+{{ load_fields('config.', type.fields) }}
+{%- endfilter %}
+    return config;
+}
+{%- endmacro -%}
+
+{%- macro load_fields(prefix, fields) -%}
+{%- for field in fields -%}
+{{ load_field(prefix, field) }}
+{% endfor -%}
+{%- endmacro -%}
+
+{%- macro load_field(prefix, field) -%}
+{% if field.required %}TOML_MANDATORY(({% else %}TOML_OPTIONAL(({% endif -%}
+{{ prefix }}{{ m.value_case(field.name) }} =
+{%- if field.type.type in ['object'] %} Load{{ m.type_case(field.type.name) }}(value.at("{{ field.type.alias }}"))
+{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_name(m.get_type(field.type.item_type)) }}>(value.at("{{ field.type.alias }}"), Load{{ m.type_case(m.get_type(field.type.item_type)) }})
+{%- elif field.type.type in ['dict', 'dictionary', 'map'] %} load_dict<{{ m.type_name(m.get_type(field.type.key_type)) }}, {{ m.type_name(m.get_type(field.type.value_type)) }}>(value.at("{{ field.type.alias }}"), Load{{ m.type_case(m.get_type(field.type.value_type)) }})
+{%- elif field.type.type in ['enum'] %}
+  {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(value, "{{ field.type.alias }}")
+  {%- else %} config::from_string<{{ m.type_name(field.type.base_type) }}>(value.at("{{ field.name }}").as_string(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
+  {%- endif %}
+{%- elif field.type.type in ['string'] %} LoadString(value.at("{{ field.name }}"))
+{%- else %} Load{{ m.type_case(m.type_name(field.type.type)) }}(value.at("{{ field.name }}"))
+{%- endif -%}
+));
+{%- endmacro -%}
+
+// This file has been generated. Do not modify.
+
+#include <functional>
+#include <iostream>
+#include <fstream>
+
+#include <toml.hpp>
+
+#include "{{ options['output_prefix'] | default('') }}config.hpp"
+
+
+#define TOML_MANDATORY(x) try { x; } catch (...) { throw; }
+#define TOML_OPTIONAL(x)  try { x; } catch (...) { }
+
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+namespace {{ namespace }} {
+{%- endfor %}
+{%- else %}
+namespace config {
+{%- endif %}
+
+#include "from_string.hpp"
+
+template<typename E>
+E load_enum(
+    const toml::value& value,
+    const char* attr)
+{
+    E e;
+    if (!config::from_string(value.as_string(), e))
+    {
+        throw std::invalid_argument("invalid enum value");
+    }
+    return e;
+}
+
+template<typename T>
+std::vector<T> load_array(
+    const toml::value& value,
+    std::function<T(const toml::value&)> f)
+{
+    std::vector<T> v;
+    for (const auto& child : value.as_array())
+    {
+        v.push_back(f(child));
+    }
+    return v;
+}
+
+template<typename K, typename V>
+std::map<K,V> load_dict(
+    const toml::value& value,
+    std::function<V(const toml::value&)> fv)
+{
+    std::map<K,V> m;
+    for (const auto& child : value.as_table())
+    {
+        const auto key = config::from_string<K>(child.first);
+        const auto val = fv(child.second);
+        m.insert(std::make_pair(key, val));
+    }
+    return m;
+}
+
+inline int LoadInt(const toml::value& value) { return value.as_integer(); }
+inline unsigned int LoadUnsignedInt(const toml::value& value) { return LoadInt(value); }
+inline double LoadDouble(const toml::value& value) { return value.is_integer() ? value.as_integer() : value.as_floating(); }
+inline float LoadFloat(const toml::value& value) { return LoadDouble(value); }
+inline bool LoadBool(const toml::value& value) { return value.as_boolean(); }
+inline std::string LoadString(const toml::value& value) { return value.as_string(); }
+
+// TODO: implement standard types
+
+{% if types -%}
+{{ load_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ load_functions(elements, unique_elements) }}
+{%- endif -%}
+
+struct std::unique_ptr<Config> LoadConfig(
+    const std::string& configPath)
+{
+{%- if elements %}
+    try
+    {
+        const auto value = toml::parse(configPath, toml::spec::v(1,1,0));
+
+        auto config = std::make_unique<struct Config>();
+
+        {% filter indent(8) -%}
+        {{ load_fields('config->', config.fields) }}
+        {%- endfilter %}
+        return config;
+    }
+    catch (const std::exception& ex)
+    {
+        throw;
+    }
+{%- endif %}
+
+    return {};
+}
+{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
+{%- for namespace in options['cpp']['namespaces'] %}
+} // namespace {{ namespace }}
+{%- endfor %}
+{%- else %}
+} // namespace config
+{%- endif %}
+
