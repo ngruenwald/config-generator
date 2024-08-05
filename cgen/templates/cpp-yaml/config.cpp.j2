@@ -18,17 +18,39 @@ struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(const YAML:
   @param types         List of types [objects]
   @param unique_types  List of unique type names [strings]
 -#}
-{%- macro load_functions(types, unique_types) -%}
+{%- macro load_functions(types, unique_types, include_vec_map) -%}
 {%- if types -%}
 {%- for type in types -%}
-{%- if type.type == 'object' and type.name in unique_types %}
-{{ load_function(type) }}
+{%- if type.name in unique_types -%}
+{%- if type.type == 'object' %}
+{{ load_function_struct(type) }}
+{%- elif type.type in ['array', 'list'] and include_vec_map %}
+{{ load_function_vector(type) }}
+{%- elif type.type in ['dict', 'dictionary', 'map'] and include_vec_map %}
+{{ load_function_map(type) }}
 {% endif -%}
+{%- endif -%}
 {%- endfor -%}
 {%- endif -%}
 {%- endmacro -%}
 
-{%- macro load_function(type) -%}
+{%- macro load_function_vector(type) -%}
+static {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
+    const YAML::Node& node)
+{
+    return load_array<{{ m.type_name(m.get_type(type.item_type)) }}>(node, Load{{ m.type_case(m.get_type(type.item_type)) }});
+}
+{%- endmacro -%}
+
+{%- macro load_function_map(type) -%}
+static {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
+    const YAML::Node& node)
+{
+    return load_dict<{{ m.type_name(m.get_type(type.key_type)) }}, {{ m.type_name(m.get_type(type.value_type)) }}>(node, "item", Load{{ m.type_case(m.get_type(type.key_type)) }}, Load{{ m.type_case(m.get_type(type.value_type)) }})
+}
+{%- endmacro -%}
+
+{%- macro load_function_struct(type) -%}
 static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
     const YAML::Node& node)
 {
@@ -141,11 +163,11 @@ inline std::string LoadString(const YAML::Node& node) { return node.as<std::stri
 // TODO: implement standard types
 
 {% if types -%}
-{{ load_functions(types, unique_types) }}
+{{ load_functions(types, unique_types, True) }}
 {%- endif -%}
 {%- if elements -%}
-{{ load_functions(elements, unique_elements) }}
-{%- endif -%}
+{{ load_functions(elements, unique_elements, False) }}
+{%- endif %}
 
 std::unique_ptr<Config> LoadConfig(
     const std::string& configPath)

@@ -78,17 +78,41 @@ ENUMS(
 {% endmacro -%}
 
 {#-
-  Renders a list of structs
+  Renders a list of types
   @param types         List of types [objects]
   @param unique_types  List of unique type names [strings]
 -#}
-{%- macro insert_structs(types, unique_types) -%}
-{%- for type in types -%}
-{%- if type.type == 'object' and type.name in unique_types -%}
+{%- macro insert_types(types, unique_types) -%}
+{%- for type in types %}
+{%- if type.name in unique_types %}
+{%- if type.type == 'object' %}
 {{ insert_struct(type) }}
+{%- elif type.type in ['array', 'list'] %}
+{{ insert_vector(type) }}
+{%- elif type.type in ['dict', 'dictionary', 'map'] %}
+{{ insert_map(type) }}
 {% endif -%}
+{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
+
+{#-
+  Renders a vector
+  @param type  Array type [object]
+-#}
+{%- macro insert_vector(type) -%}
+{{ insert_description(type.description) }}
+typedef std::vector<{{ m.type_name(m.get_type(type.item_type)) }}> {{ m.type_case(type.name) }};
+{% endmacro -%}
+
+{#-
+  Renders a map
+  @param type  Dictionary type [object]
+-#}
+{%- macro insert_map(type) -%}
+{{ insert_description(type.description) }}
+typedef std::map<{{ m.type_name(m.get_type(type.key_type)) }}, {{ m.type_name(m.get_type(type.value_type)) }}> {{ m.type_case(type.name) }};
+{% endmacro -%}
 
 {#-
   Renders a struct
@@ -189,7 +213,7 @@ namespace config {
 {%- endif %}
 {% if types -%}
 {{ insert_enums(types, unique_types) }}
-{{ insert_structs(types, unique_types) }}
+{{ insert_types(types, unique_types) }}
 {%- endif -%}
 
 {{ insert_struct(config) }}
