@@ -158,7 +158,7 @@ void get_enum(
 {
     std::string tmp;
     j.at(name).get_to(tmp);
-    if (!config::from_string(tmp.c_str(), v))
+    if (!from_string(tmp.c_str(), v))
     {
         throw std::invalid_argument("invalid enum value");
     }

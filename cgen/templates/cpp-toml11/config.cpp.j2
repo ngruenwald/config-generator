@@ -92,7 +92,7 @@ E load_enum(
     const char* attr)
 {
     E e;
-    if (!config::from_string(value.as_string(), e))
+    if (!from_string(value.as_string().c_str(), e))
     {
         throw std::invalid_argument("invalid enum value");
     }

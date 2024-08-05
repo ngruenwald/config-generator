@@ -128,7 +128,7 @@ E load_enum(
     const char* attr)
 {
     E e;
-    if (!config::from_string(get_attr(node, attr).value(), e))
+    if (!from_string(get_attr(node, attr).value(), e))
     {
         throw std::invalid_argument("invalid enum value");
     }
