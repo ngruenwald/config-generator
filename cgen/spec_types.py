@@ -68,7 +68,7 @@ class BooleanType(Type):
     def __init__(self, name: str, type_: str, description: str = None,
                  defv: bool = None):
         super().__init__(name, type_, description)
-        self.default = defv if defv is not None else False
+        self.default = defv if defv is not None else None
 
     def __str__(self):
         return f'BooleanType{{name={self.name},type={self.type},alias={self.alias}}}'
