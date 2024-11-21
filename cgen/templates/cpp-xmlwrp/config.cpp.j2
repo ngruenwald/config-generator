@@ -32,7 +32,7 @@ struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(const xml::
 static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
     const xml::Node& node)
 {
-    struct {{ m.type_case(type.name) }} config;
+    struct {{ m.type_case(type.name) }} config{};
 {% filter indent(4) %}
 {{ load_fields('config.', type.fields) }}
 {%- endfilter %}
@@ -61,10 +61,59 @@ static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
 );
 {%- endmacro -%}
 
+
+{#-
+  Renders a list of Print functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro print_functions(types, unique_types) -%}
+{%- if types -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types %}
+{{ print_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro print_function(type) -%}
+template<>
+void Print<{{ m.type_case(type.name) }}>(
+    std::ostream& os,
+    const {{ m.type_case(type.name) }}& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << "\n";
+{%- filter indent(4) -%}
+{{ print_fields('config.', type.fields) }}
+{%- endfilter %}
+}
+{%- endmacro -%}
+
+{%- macro print_fields(prefix, fields) -%}
+{% for field in fields %}
+{{ print_field(prefix, field) }}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro print_field(prefix, field) -%}
+{%- if field.type.type in ['object'] %}Print<{{ m.type_case(field.type.name) }}>(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }} ");
+{%- elif field.type.type in ['array', 'list'] %}print_array<{{ m.type_name(m.get_type(field.type.item_type)) }}>(os, {{ prefix }}{{ m.value_case(field.name) }}, static_cast<void(*)(std::ostream&, const {{ m.type_name(m.get_type(field.type.item_type)) }}&, int, const char*)>(Print<{{ m.type_name(m.get_type(field.type.item_type)) }}>), indentLevel, "{{ field.name }} ");
+{%- elif field.type.type in ['dict', 'dictionary', 'map'] %} print_dict<{{ m.type_name(m.get_type(field.type.key_type)) }}, {{ m.type_name(m.get_type(field.type.value_type)) }}>(os, "item", Print<{{ m.type_name(m.get_type(field.type.key_type)) }}>, Print<{{ m.type_name(m.get_type(field.type.value_type)) }}>)
+{%- else %}
+    {%- if field.type.base and field.type.base != 10 %}Print(os, {{ prefix }}{{ m.value_case(field.name) }}, {{ field.type.base }}, indentLevel + 2, "{{ field.name }}: ");
+    {%- else %}Print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}: ");
+    {%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
 // This file has been generated. Do not modify.
 
 #include <functional>
 #include <iostream>
+#include <iomanip>
 
 #include <libxmlwrp.hpp>
 
@@ -124,7 +173,7 @@ template<typename K, typename V>
 std::map<K,V> load_dict(
     const xml::Node& node,
     const char* name,
-    std::function<T(const xml::Node&)> f)
+    std::function<std::pair<K,V>(const xml::Node&)> f)
 {
     std::map<K,V> m;
     for (const auto& child : node.GetChildren(name))
@@ -132,15 +181,148 @@ std::map<K,V> load_dict(
         auto [key, value] = f(child);
         m[key] = value;
     }
+    return m;
 }
 
-static std::string LoadString(
+[[maybe_unused]] static std::string LoadString(
     const xml::Node& node)
 {
     return node.GetStringVal();
 }
 
+[[maybe_unused]] static int LoadInt(
+    const xml::Node& node)
+{
+    return node.GetIntVal();
+}
+
+[[maybe_unused]] static unsigned int LoadUint(
+    const xml::Node& node)
+{
+    return node.GetUIntVal();
+}
+
+[[maybe_unused]] static bool LoadBool(
+    const xml::Node& node)
+{
+    return node.GetBoolVal();
+}
+
 // TODO: implement standard types
+
+
+
+template<typename T>
+void print_array(
+    std::ostream& os,
+    const std::vector<T>& v,
+    std::function<void(std::ostream&, const T&, int, const char*)> print,
+    int indentLevel,
+    const char* name)
+{
+    for (const auto& item : v)
+    {
+        print(os, item, indentLevel + 2, name);
+    }
+}
+
+template<typename K, typename V>
+void print_dict(
+    std::ostream& os,
+    const std::map<K, V>& m,
+    const char* name,
+    std::function<void(std::ostream&, const K&, int)> pK,
+    std::function<void(std::ostream&, const K&, int)> pV,
+    int indentLevel)
+{
+    for (const auto& [key, value] : m)
+    {
+        os << std::setw(indentLevel) << "" << name << "\n";
+        os << std::setw(indentLevel + 2) << "" << "key:" << "\n";
+        pK(os, key, value, indentLevel + 4);
+        os << std::setw(indentLevel + 2) << "" << "value:" << "\n";
+        pV(os, key, value, indentLevel + 4);
+    }
+}
+
+template<typename T>
+void Print(
+    std::ostream& os,
+    const T& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << config << "\n";
+}
+
+{% if options['cpp'] and options['cpp']['use_optional'] | default(false) -%}
+template<typename T>
+void Print(
+    std::ostream& os,
+    const std::optional<T>& config,
+    int indentLevel,
+    const char* prefix)
+{
+    if (!config)
+    {
+        return;
+    }
+    Print(os, config.value(), indentLevel, prefix);
+}
+{%- endif %}
+
+template<>
+void Print<bool>(
+    std::ostream& os,
+    const bool& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << std::boolalpha << config << "\n";
+}
+
+template<typename T>
+void Print(
+    std::ostream& os,
+    T value,
+    int base,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix;
+
+    switch (base)
+    {
+        case 8:
+            os << "0" << std::oct << value;
+            break;
+        case 16:
+            os << "0x" << std::hex << std::uppercase << static_cast<int>(value);
+            break;
+        default:
+            os << value;
+            break;
+    }
+    os << std::dec << "\n";
+}
+
+{% if options['cpp'] and options['cpp']['use_optional'] | default(false) -%}
+template<typename T>
+void Print(
+    std::ostream& os,
+    std::optional<T> value,
+    int base,
+    int indentLevel,
+    const char* prefix)
+{
+    if (!value)
+    {
+        return;
+    }
+    Print(os, value.value(), base, indentLevel, prefix);
+}
+{%- endif %}
+
 
 {% if types -%}
 {{ load_functions(types, unique_types) }}
@@ -148,6 +330,13 @@ static std::string LoadString(
 {%- if elements -%}
 {{ load_functions(elements, unique_elements) }}
 {%- endif -%}
+
+{% if types -%}
+{{ print_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ print_functions(elements, unique_elements) }}
+{% endif -%}
 
 static void ValidateConfig(
     const xml::Document& doc)
@@ -202,13 +391,22 @@ std::unique_ptr<Config> LoadConfig(
         {%- endfilter %}
         return config;
     }
-    catch (const std::exception& ex)
+    catch (const std::exception&)
     {
         throw;
     }
 {%- endif %}
+}
 
-    return {};
+std::ostream& operator<<(
+    std::ostream& os,
+    const Config& config)
+{
+    constexpr int indentLevel = 0;
+    {% filter indent(4) -%}
+    {{ print_fields('config.', config.fields) }}
+    {%- endfilter %}
+    return os;
 }
 {% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
 {%- for namespace in options['cpp']['namespaces'] %}

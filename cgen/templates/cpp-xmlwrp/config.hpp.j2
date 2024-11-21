@@ -176,6 +176,7 @@ struct {{ m.type_case(type.name) }}
 #include <memory>
 {% if options['cpp'] and options['cpp']['use_optional'] | default(false) %}#include <optional>
 {% endif -%}
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -205,6 +206,9 @@ std::unique_ptr<Config> LoadConfig(
 /// @returns True if the the configuration is valid, otherwise False
 bool ValidateConfig(
     const std::string& configPath);
+
+std::ostream& operator<<(std::ostream& os, const Config& config);
+
 {% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
 {%- for namespace in options['cpp']['namespaces'] %}
 } // namespace {{ namespace }}
