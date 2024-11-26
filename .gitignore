@@ -1,8 +1,11 @@
 __pycache__/
 out/
 dist/
-.directory
-.vscode
+.vscode/
+.venv/
 tests/cpp-xxxx/build/
+
+.directory
 .pdm-python
 .pdm.toml
+*.yml
