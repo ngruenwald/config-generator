@@ -1,0 +1,79 @@
+typedef nlohmann::json config_data_t;
+
+inline config_data_t load_file(
+    const std::string& filepath)
+{
+    std::ifstream ifs{filepath.c_str()};
+
+    if (!ifs.good())
+    {
+        throw std::runtime_error("could not load file");
+    }
+
+    return nlohmann::json::parse(ifs, nullptr, true, true);
+}
+
+inline void validate(
+    const config_data_t& data)
+{
+}
+
+inline bool contains_key(
+    const config_data_t& data,
+    const char* key,
+    [[maybe_unused]] config_options opts)
+{
+    return data.contains(key);
+}
+
+inline const config_data_t& get_key(
+    const config_data_t& data,
+    const char* key,
+    [[maybe_unused]] config_options opts)
+{
+    return data[key];
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    [[maybe_unused]] config_options opts)
+{
+    data.get_to(value);
+}
+
+template<typename T>
+inline void from_data(
+    const T& data,
+    T& value,
+    [[maybe_unused]] config_options opts)
+{
+    value = data;
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    std::vector<T>& value,
+    [[maybe_unused]] config_options opts)
+{
+    for (const auto& child : data)
+    {
+        T tmp; from_data(child, tmp, opts);
+        value.push_back(tmp);
+    }
+}
+
+template<typename K, typename V>
+inline void from_data(
+    const config_data_t& data,
+    std::map<K,V>& value,
+    [[maybe_unused]] config_options opts)
+{
+    for (const auto& [key, val] : data.items())
+    {
+        V v; from_data(val, v, opts);
+        value[config::from_string<K>(key)] = v;
+    }
+}

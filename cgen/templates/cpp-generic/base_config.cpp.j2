@@ -1,0 +1,218 @@
+{%- import "_base_macros.j2" as m -%}
+
+{#-
+  Renders a list of load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro load_functions(types, unique_types) -%}
+{%- for type in types | default([]) -%}
+{%- if type.type == "object" and type.name in unique_types %}
+{{ load_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%- macro load_function(type) -%}
+static void from_data(
+    const config_data_t& data,
+    {{ m.type_case(type.name) }}& value,
+    [[maybe_unused]] config_options opts)
+{
+{%- for field in type.fields %}
+{%- if field.required %}
+    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+{%- else %}
+    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+{%- endif %}
+{%- endfor %}
+}
+{%- endmacro -%}
+
+{#-
+  Renders a list of enum load functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro enum_load_functions(types, unique_types) -%}
+{%- for type in types | default([]) -%}
+{%- if type.type == "enum" and type.base_type == "string" and type.name in unique_types %}
+static void from_data(
+    const config_data_t& data,
+    {{ m.type_case(type.name) }}& value,
+    [[maybe_unused]] config_options opts)
+{
+    enum_from_data(data, value);
+}
+{% endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+// This file has been generated. Do not modify.
+
+#include <functional>
+#include <iostream>
+
+{% include "_inc.hpp.j2" %}
+
+#include "{{ opt.output_prefix }}config.hpp"
+{% for namespace in opt.namespaces %}
+namespace {{ namespace }} {
+{%- endfor %}
+
+#include "from_string.hpp"
+
+//
+// options
+//
+
+struct config_options
+{
+    unsigned long flags{0};
+    const char* elementName{"entry"};
+
+    config_options() {}
+    config_options(unsigned long f) : flags{f} {}
+    config_options(const char* en) : elementName{en} {}
+    config_options(unsigned long f, const char* en) : flags{f}, elementName{en} {}
+};
+
+//
+// specific
+//
+
+{% include "_func.hpp.j2" %}
+
+//
+// common
+//
+
+template<typename T>
+inline void get_mandatory_element(
+    const config_data_t& data,
+    const char* name,
+    T& value,
+    config_options opts)
+{
+    from_data(get_key(data, name, opts), value, opts);
+}
+
+template<typename T>
+inline void get_optional_element(
+    const config_data_t& data,
+    const char* name,
+    T& value,
+    config_options opts)
+{
+    if (contains_key(data, name, opts))
+    {
+        from_data(get_key(data, name, opts), value, opts);
+    }
+}
+{% if opt.use_optional %}
+template<typename T>
+inline void get_optional_element(
+    const config_data_t& data,
+    const char* name,
+    std::optional<T>& value,
+    config_options opts)
+{
+    if (contains_key(data, name, opts))
+    {
+        T tmp;
+        from_data(get_key(data, name, opts), tmp, opts);
+        value = tmp;
+    }
+}
+{% endif %}
+template<typename T>
+inline void get_optional_element(
+    const config_data_t& data,
+    const char* name,
+    std::vector<T>& value,
+    config_options opts)
+{
+    if (contains_key(data, name, opts))
+    {
+        from_data(get_key(data, name, opts), value, opts);
+    }
+}
+
+template<typename K, typename V>
+inline void get_optional_element(
+    const config_data_t& data,
+    const char* name,
+    std::map<K,V>& value,
+    config_options opts)
+{
+    if (contains_key(data, name, opts))
+    {
+        from_data(get_key(data, name, opts), value, opts);
+    }
+}
+
+template<typename T>
+inline void enum_from_data(
+    const config_data_t& data,
+    T& value)
+{
+    std::string tmp;
+    from_data(data, tmp, {});
+    if (!from_string(tmp.c_str(), value))
+    {
+        throw std::invalid_argument("invalid enum value");
+    }
+}
+
+//
+// custom
+//
+
+{% if types -%}
+{{ enum_load_functions(types, unique_types) }}
+{{ load_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ load_functions(elements, unique_elements) }}
+{%- endif %}
+
+static void from_data(
+    const config_data_t& data,
+    Config& value,
+    [[maybe_unused]] config_options opts)
+{
+{%- for field in config.fields %}
+{%- if field.required %}
+    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+{%- else %}
+    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+{%- endif %}
+{%- endfor %}
+}
+
+struct std::unique_ptr<Config> LoadConfig(
+    const std::string& configPath)
+{
+{%- if elements %}
+    try
+    {
+        auto data = load_file(configPath);
+
+        validate(data);
+
+        auto config = std::make_unique<struct Config>();
+        from_data(data, *config, {});
+
+        return config;
+    }
+    catch (const std::exception& ex)
+    {
+        throw;
+    }
+{%- endif %}
+
+    return {};
+}
+{% for namespace in opt.namespaces %}
+} // namespace {{ namespace }}
+{%- endfor %}

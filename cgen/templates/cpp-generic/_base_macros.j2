@@ -140,3 +140,12 @@ _
 {%- endif -%}
 {{ n }}
 {%- endmacro -%}
+
+{%- macro insert_opts(field) -%}
+
+{%- if field.type.type in ['array', 'list'] -%}
+{"{{ field.type.item_name | default('entry') }}"}
+{%- else -%}
+{}
+{%- endif -%}
+{%- endmacro -%}
