@@ -49,7 +49,7 @@
   param s The string to escape.
 #}
 {%- macro escape_string(s) -%}
-{{ s | replace('&', '&amp;') | replace('<', '&lt;') | replace('>', '&gt;') | replace('\'', '&apos;')}}
+{{ s | replace('&', '&amp;') | replace('<', '&lt;') | replace('>', '&gt;') | replace('\'', '&apos;') }}
 {%- endmacro -%}
 
 {%- macro format_pattern(s) -%}
@@ -160,13 +160,13 @@
 <xs:element name="{{ element.name }}"
 {%- if not required %} minOccurs="0"{% endif -%}
 >
-{%- if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
+{% if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
   <xs:complexType>
     {{ insert_complexTypeInner(element) }}
   </xs:complexType>
 {%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
 </xs:element>
-{%- elif element.type.type in ['object'] -%}
+{%- elif element.type.type in ['object', 'array', 'list', 'map', 'dict', 'dictionary'] -%}
 <xs:element name="{{ element.name }}" type="{{ element.type.name }}"
 {%- if not required %} minOccurs="0"{% endif -%}
 >
@@ -199,8 +199,10 @@
 -#}
 {%- macro insert_complexType(t) -%}
 <xs:complexType name="{{ t.name }}">
+{% filter indent(2) %}
 {%- if t.description %}{{ insert_description(t.description, 0) }}{% endif %}
 {{ insert_complexTypeInner(t) }}
+{% endfilter %}
 </xs:complexType>
 {%- endmacro -%}
 
@@ -214,27 +216,27 @@
 {%- if t.type in ['array', 'list'] %}
   <xs:sequence>
     <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" type="{{ type_name(t.item_type, unique_types) }}"
-    {%- if t.minsize is not none %} minOccurs="{{ t.minsize }}"{% endif -%}
-    {%- if t.maxsize is not none %} maxOccurs="{{ t.maxsize }}"{% endif -%}
+    {%- if t.minsize is not none %} minOccurs="{{ t.minsize }}"{% else %} minOccurs="0"{% endif -%}
+    {%- if t.maxsize is not none %} maxOccurs="{{ t.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
     />
   </xs:sequence>
 {%- elif t.type in ['object'] %}
 {#- determine number of elements in object -#}
 {%- set tmp = {'num_elements': 0} -%}
 {%- for f in t.fields -%}
-{%- if f.type.type in ['object', 'array', 'list'] -%}
+{%- if f.type.type in ['object', 'array', 'list', 'map', 'dict', 'dictionary'] -%}
 {%- if tmp.update({'num_elements': tmp['num_elements'] + 1}) %}{% endif %}
 {%- endif -%}
 {%- endfor -%}
 {%- if tmp['num_elements'] > 0 %}
-  {%- if t['xml']['type'] | default('sequence') == 'choice' -%}
+  {%- if t['xml']['type'] | default('sequence') == 'choice' %}
   <xs:choice minOccurs="{{ t['xml']['min'] | default(1) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
-  {%- else -%}
+  {%- else %}
   <xs:{{ t['xml']['type'] | default('sequence') }}>
   {%- endif -%}
   {%- filter indent(2) %}
   {% for f in t.fields -%}
-  {%- if f.type.type in ['object', 'array', 'list'] -%}
+  {%- if f.type.type in ['object', 'array', 'list', 'map', 'dict', 'dictionary'] -%}
   {{ insert_element2(f, f.required) }}
   {% endif -%}
   {%- endfor -%}
@@ -242,14 +244,25 @@
   </xs:{{ t['xml']['type'] | default('sequence') }}>
 {%- endif %}
   {%- for f in t.fields -%}
-  {%- if not f.type.type in ['object', 'array', 'list'] %}
+  {%- if not f.type.type in ['object', 'array', 'list', 'map', 'dict', 'dictionary'] %}
   {% filter indent(2) %}{{ insert_attribute(f, f.required) }}{% endfilter %}
   {%- endif -%}
   {%- endfor -%}
+{%- elif t.type in ['map', 'dict', 'dictionary'] %}
+  <xs:sequence>
+    <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" minOccurs="0" maxOccurs="unbounded">
+      <xs:complexType>
+        <xs:sequence>
+          <xs:element name="key" type="{{ type_name(t.key_type, unique_types) }}" />
+          <xs:element name="value" type="{{ type_name(t.value_type, unique_types) }}" />
+        </xs:sequence>
+      </xs:complexType>
+    </xs:element>
+  </xs:sequence>
 {%- else -%}
     <!-- unknown type "{{ t }}" -->
 {%- endif %}
-{%- endmacro -%}
+{%- endmacro %}
 
 
 {#-
@@ -295,7 +308,7 @@
   param t  The type.
 -#}
 {%- macro type(t) -%}
-{%- if t.type in ['object', 'array', 'list'] -%}
+{%- if t.type in ['object', 'array', 'list', 'map', 'dict', 'dictionary'] -%}
 {{ insert_complexType(t) }}
 {%- else -%}
 {{ simpleType(t) }}
@@ -311,39 +324,41 @@
 
 {{ insert_element2(config, True) }}
 
-{% for e in elements -%}
+{%- filter indent(2) -%}
+{%- for e in elements -%}
 {% if e.name in unique_elements %}
 {{ type(e) }}
 {% endif %}
-{%- endfor %}
-{% for t in types -%}
+{%- endfor -%}
+{%- for t in types -%}
 {% if t.name in unique_types %}
 {{ type(t) }}
 {% endif %}
-{%- endfor %}
+{%- endfor -%}
+{%- endfilter %}
 
-<xs:simpleType name="hex8">
-  <xs:restriction base="xs:hexBinary">
-    <xs:length value="1" />
-  </xs:restriction>
-</xs:simpleType>
+  <xs:simpleType name="hex8">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="1" />
+    </xs:restriction>
+  </xs:simpleType>
 
-<xs:simpleType name="hex16">
-  <xs:restriction base="xs:hexBinary">
-    <xs:length value="2" />
-  </xs:restriction>
-</xs:simpleType>
+  <xs:simpleType name="hex16">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="2" />
+    </xs:restriction>
+  </xs:simpleType>
 
-<xs:simpleType name="hex32">
-  <xs:restriction base="xs:hexBinary">
-    <xs:length value="4" />
-  </xs:restriction>
-</xs:simpleType>
+  <xs:simpleType name="hex32">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="4" />
+    </xs:restriction>
+  </xs:simpleType>
 
-<xs:simpleType name="hex64">
-  <xs:restriction base="xs:hexBinary">
-    <xs:length value="8" />
-  </xs:restriction>
-</xs:simpleType>
+  <xs:simpleType name="hex64">
+    <xs:restriction base="xs:hexBinary">
+      <xs:length value="8" />
+    </xs:restriction>
+  </xs:simpleType>
 
 </xs:schema>

@@ -1,0 +1,20 @@
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+
+#include <libxmlwrp.hpp>
+{% if opt.use_validate %}
+#include "embedded_resources.h"
+
+static void get_schema_data(
+    const char*& buffer,
+    size_t& size)
+{
+    BINARY_RESOURCE_DATA(xsd_data, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+    BINARY_RESOURCE_SIZE(xsd_size, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+
+    buffer = reinterpret_cast<const char*>(xsd_data);
+    size = xsd_size;
+}
+{% endif %}

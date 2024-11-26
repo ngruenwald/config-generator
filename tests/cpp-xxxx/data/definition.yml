@@ -1,11 +1,13 @@
 info:
   version: 1.0
-  title: my_fancy_config
+  title: config
   description: This is a fancy configuration
 
 options:
   cpp:
     use_optional: True
+    use_printer: True
+    use_validate: True
 
 elements:
   types:
@@ -50,6 +52,11 @@ elements:
       type: string
     required: True
 
+  an_enum:
+    $ref: '#/types/little-enum'
+    required: True
+
+
 types:
   many-types:
     type: object
@@ -76,32 +83,17 @@ types:
       jm:
         type: boolean
       km:
-        type: array
-        items:
-          type: integer
-        itemName: item
+        $ref: '#/types/integer-array'
       lm:
-        type: list
-        items:
-          type: string
+        $ref: '#/types/string-list'
       mm:
         $ref: '#/types/simple-object'
       nm:
-        type: dict  # dict / dictionary / map
-        keys:
-          type: string
-        values:
-          type: string
+        $ref: '#/types/string-string-dict'
       om:
-        type: array
-        items:
-          $ref: '#/types/simple-object'
+        $ref: '#/types/simple-object-array'
       pm:
-        type: dict
-        keys:
-          type: int
-        values:
-          $ref: '#/types/simple-object'
+        $ref: '#/types/int-simple-object-dict'
       # optional
       ao:
         type: int
@@ -124,21 +116,13 @@ types:
       jo:
         type: boolean
       ko:
-        type: array
-        items:
-          type: integer
+        $ref: '#/types/integer-array'
       lo:
-        type: list
-        items:
-          type: string
+        $ref: '#/types/string-list'
       mo:
         $ref: '#/types/simple-object'
       noo:
-        type: dict
-        keys:
-          type: string
-        values:
-          type: string
+        $ref: '#/types/string-string-dict'
     required:
       - am
       - bm
@@ -164,6 +148,40 @@ types:
         type: int
     required:
       - am
+
+  little-enum:
+    type: string
+    enum: [foo, bar]
+
+  integer-array:
+    type: array
+    items:
+      type: integer
+    itemName: item
+
+  string-list:
+    type: list
+    items:
+      type: string
+
+  string-string-dict:
+    type: dict  # dict / dictionary / map
+    keys:
+      type: string
+    values:
+      type: string
+
+  simple-object-array:
+    type: array
+    items:
+      $ref: '#/types/simple-object'
+
+  int-simple-object-dict:
+    type: dict
+    keys:
+      type: int
+    values:
+      $ref: '#/types/simple-object'
 
   # bar-type:
   #   type: object

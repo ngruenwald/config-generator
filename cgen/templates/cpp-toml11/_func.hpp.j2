@@ -5,12 +5,12 @@ inline config_data_t load_file(
 {
     return toml::parse(filepath, toml::spec::v(1,1,0));
 }
-
+{% if opt.use_validate %}
 inline void validate(
     const config_data_t& data)
 {
 }
-
+{% endif %}
 inline bool contains_key(
     const config_data_t& data,
     const char* key,

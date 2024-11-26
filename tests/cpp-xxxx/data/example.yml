@@ -38,3 +38,4 @@ an_array:
 a_dictionary:
   "0": "0"
   "1": "1"
+an_enum: "foo"

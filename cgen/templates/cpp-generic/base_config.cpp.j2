@@ -197,9 +197,9 @@ struct std::unique_ptr<Config> LoadConfig(
     try
     {
         auto data = load_file(configPath);
-
+        {% if opt.use_validate %}
         validate(data);
-
+        {% endif %}
         auto config = std::make_unique<struct Config>();
         from_data(data, *config, {});
 
