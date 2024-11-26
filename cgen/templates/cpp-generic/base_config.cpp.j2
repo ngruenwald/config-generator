@@ -48,9 +48,59 @@ static void from_data(
 {%- endfor -%}
 {%- endmacro -%}
 
+{#-
+  Renders a list of print functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro print_functions(types, unique_types) -%}
+{%- if types -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types %}
+{{ print_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+{%- macro print_function(type) -%}
+template<>
+void print<{{ m.type_case(type.name) }}>(
+    std::ostream& os,
+    const {{ m.type_case(type.name) }}& config,
+    int indentLevel,
+    const char* prefix)
+{
+    if (prefix != nullptr && strlen(prefix) > 0)
+    {
+        os << std::setw(indentLevel) << "" << prefix << "\n";
+    }
+{%- filter indent(4) -%}
+{{ print_fields('config.', type.fields) }}
+{%- endfilter %}
+}
+{%- endmacro -%}
+{%- macro print_fields(prefix, fields) -%}
+{% for field in fields %}
+{{ print_field(prefix, field) }}
+{%- endfor -%}
+{%- endmacro -%}
+{%- macro print_field(prefix, field) -%}
+{%- if field.type.type in ['object'] %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}: ");
+{%- elif field.type.type in ['array'] %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}");
+{%- elif field.type.type in ['dict'] %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}");
+{%- else %}
+    {%- if field.type.base and field.type.base != 10 %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, {{ field.type.base }}, indentLevel + 2, "{{ field.name }}: ");
+    {%- else %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}: ");
+    {%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
 // This file has been generated. Do not modify.
 
 #include <functional>
+{% if opt.use_printer -%}
+#include <iomanip>
+{%- endif %}
 #include <iostream>
 
 {% include "_inc.hpp.j2" %}
@@ -164,6 +214,145 @@ inline void enum_from_data(
     }
 }
 
+{% if opt.use_printer -%}
+template<typename T>
+void print(
+    std::ostream& os,
+    const T& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << config << "\n";
+}
+
+template<typename T>
+void print(
+    std::ostream& os,
+    const std::vector<T>& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << ':';
+    if (config.size() == 0)
+    {
+        os << " <empty>\n";
+    }
+    else
+    {
+        os << '\n';
+        for (size_t n = 0; n < config.size(); n++)
+        {
+            std::ostringstream oss;
+            oss << '[' << n << "]: ";
+            print(os, config[n], indentLevel + 2, oss.str().c_str());
+        }
+    }
+}
+
+template<typename K, typename V>
+void print(
+    std::ostream& os,
+    const std::map<K,V>& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << ':';
+    if (config.size() == 0)
+    {
+        os << " <empty>\n";
+    }
+    else
+    {
+        os << '\n';
+        size_t n = 0;
+        for (const auto& [key, value] : config)
+        {
+            os << std::setw(indentLevel + 2) << "" << '[' << n << "]: " << '\n';
+            print(os, key, indentLevel + 4, "key: ");
+            print(os, value, indentLevel + 4, "value: ");
+            n += 1;
+        }
+    }
+}
+
+{% if opt.use_optional -%}
+template<typename T>
+void print(
+    std::ostream& os,
+    const std::optional<T>& config,
+    int indentLevel,
+    const char* prefix)
+{
+    if (!config)
+    {
+        return;
+    }
+    print(os, config.value(), indentLevel, prefix);
+}
+{%- endif %}
+
+template<>
+void print<bool>(
+    std::ostream& os,
+    const bool& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << std::boolalpha << config << "\n";
+}
+
+template<>
+void print<std::string>(
+    std::ostream& os,
+    const std::string& config,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix << '"' << config << '"' << '\n';
+}
+
+template<typename T>
+void print(
+    std::ostream& os,
+    T value,
+    int base,
+    int indentLevel,
+    const char* prefix)
+{
+    os << std::setw(indentLevel) << "" << prefix;
+    switch (base)
+    {
+        case 8:
+            os << "0" << std::oct << value;
+            break;
+        case 16:
+            os << "0x" << std::hex << std::uppercase << static_cast<int>(value);
+            break;
+        default:
+            os << value;
+            break;
+    }
+    os << std::dec << "\n";
+}
+
+{% if opt.use_optional -%}
+template<typename T>
+void print(
+    std::ostream& os,
+    std::optional<T> value,
+    int base,
+    int indentLevel,
+    const char* prefix)
+{
+    if (!value)
+    {
+        return;
+    }
+    print(os, value.value(), base, indentLevel, prefix);
+}
+{%- endif %}
+{%- endif %}
+
 //
 // custom
 //
@@ -176,9 +365,29 @@ inline void enum_from_data(
 {{ load_functions(elements, unique_elements) }}
 {%- endif %}
 
+{% if opt.use_printer -%}
+{% if types -%}
+{{ print_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ print_functions(elements, unique_elements) }}
+{%- endif %}
+
+std::ostream& operator<<(
+    std::ostream& os,
+    const {{ m.type_case(config.name) }}& config)
+{
+    constexpr int indentLevel = 0;
+    {% filter indent(4) -%}
+    {{ print_fields('config.', config.fields) }}
+    {%- endfilter %}
+    return os;
+}
+{%- endif %}
+
 static void from_data(
     const config_data_t& data,
-    Config& value,
+    {{ m.type_case(config.name) }}& value,
     [[maybe_unused]] config_options opts)
 {
 {%- for field in config.fields %}
@@ -190,7 +399,7 @@ static void from_data(
 {%- endfor %}
 }
 
-struct std::unique_ptr<Config> LoadConfig(
+struct std::unique_ptr<{{ m.type_case(config.name) }}> LoadConfig(
     const std::string& configPath)
 {
 {%- if elements %}
@@ -200,7 +409,7 @@ struct std::unique_ptr<Config> LoadConfig(
         {% if opt.use_validate %}
         validate(data);
         {% endif %}
-        auto config = std::make_unique<struct Config>();
+        auto config = std::make_unique<struct {{ m.type_case(config.name) }}>();
         from_data(data, *config, {});
 
         return config;

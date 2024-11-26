@@ -175,8 +175,12 @@ struct {{ m.type_case(type.name) }}
 #include <cstdint>
 #include <map>
 #include <memory>
-{% if opt.use_optional %}#include <optional>
-{% endif -%}
+{% if opt.use_optional -%}
+#include <optional>
+{%- endif %}
+{% if opt.use_printer -%}
+#include <sstream>
+{%- endif %}
 #include <string>
 #include <vector>
 
@@ -190,6 +194,11 @@ namespace {{ namespace }} {
 {%- endif -%}
 
 {{ insert_struct(config) }}
+{% if opt.use_printer -%}
+std::ostream& operator<<(
+    std::ostream& os,
+    const {{ m.type_case(config.name) }}& config);
+{%- endif %}
 
 /// Loads the configuration from file
 /// @param[in] configPath Location of the configuration file
@@ -197,11 +206,6 @@ namespace {{ namespace }} {
 std::unique_ptr<Config> LoadConfig(
     const std::string& configPath);
 
-/// Validates the configuration file against the internal schema
-/// @param[in] configPath Location of the configuration file
-/// @returns True if the the configuration is valid, otherwise False
-bool ValidateConfig(
-    const std::string& configPath);
 {%- for namespace in opt.namespaces %}
 } // namespace {{ namespace }}
 {%- endfor %}
