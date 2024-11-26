@@ -126,9 +126,9 @@ struct {{ m.type_case(type.name) }}
 {{ insert_struct(member) }}
 {%- endif %}
 {{ insert_optional_struct(member) }};
-{%- elif member.type.type == "array" or member.type.type == "list" %}
+{%- elif member.type.type == "array" %}
 {{ insert_optional_vector(member) }} {{ m.value_case(member.name) }};
-{%- elif member.type.type == "dict" or member.type.type == "dictionary" or member.type.type == "map" %}
+{%- elif member.type.type == "dict" %}
 {{ insert_optional_map(member) }} {{ m.value_case(member.name) }};
 {%- elif member.type.type == "enum" %}
   {%- if member.type.base_type == "string" %}
@@ -146,11 +146,11 @@ struct {{ m.type_case(type.name) }}
 {%- macro format_default_value(mt) -%}
 {%-   if mt.type in ["string"]            -%}"{{ mt.default }}"
 {%- elif mt.type in ["char", "character"] -%}"{{ mt.default }}"
-{%- elif mt.type in ["bool", "boolean"]   -%}{{ "true" if mt.default else "false" }}
-{%- elif mt.type in ["int", "integer", "number", "uint", "unsigned"] -%}{{ mt.default | base(mt.base) }}
+{%- elif mt.type in ["bool"]   -%}{{ "true" if mt.default else "false" }}
+{%- elif mt.type in ["int", "uint"] -%}{{ mt.default | base(mt.base) }}
 {%- elif mt.type in ["enum"] -%}
   {%- if mt.base_type in ["string"] -%}{{ m.type_name(mt.name) }}::{{ m.enum_case(mt.default) }}
-  {%- elif mt.base_type in ["int", "integer", "number", "uint", "unsigned"] -%}{{ mt.default | base(mt.base) }}
+  {%- elif mt.base_type in ["int", "uint"] -%}{{ mt.default | base(mt.base) }}
   {%- else -%}{{ mt.default }}
   {%- endif -%}
 {%- else -%}{{ mt.default }}

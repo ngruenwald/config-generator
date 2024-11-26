@@ -29,10 +29,10 @@ class IntegerType(Type):
         return f'IntegerType{{default={self.default}}}'
 
     @staticmethod
-    def create(name: str, props: Dict):
+    def create(name: str, props: Dict, ttype: str):
         return IntegerType(
             name=name,
-            type_=props.get('type', 'int'),
+            type_=ttype,
             description=props.get('description', ''),
             defv=props.get('default', None),
             base=props.get('base', 10),
@@ -53,10 +53,10 @@ class FloatingType(Type):
         return f'FloatingType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: Dict):
+    def create(name: str, props: Dict, ttype: str):
         return FloatingType(
             name=name,
-            type_=props.get('type', 'float'),
+            type_=ttype,
             description=props.get('description', ''),
             defv=props.get('default', None),
             minv=props.get('min', None),
@@ -84,10 +84,10 @@ class BooleanType(Type):
         return f'BooleanType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: Dict):
+    def create(name: str, props: Dict, ttype: str):
         return BooleanType(
             name=name,
-            type_=props.get('type', 'bool'),
+            type_=ttype,
             description=props.get('description', ''),
             defv=props.get('default', None)
         )
@@ -107,10 +107,10 @@ class StringType(Type):
         return f'StringType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: Dict):
+    def create(name: str, props: Dict, ttype: str):
         return StringType(
             name=name,
-            type_=props.get('type', 'string'),
+            type_=ttype,
             description=props.get('description', ''),
             defv=props.get('default', None),
             pattern=props.get('pattern', None),
@@ -131,11 +131,11 @@ class EnumType(Type):
         return f'EnumType{{name={self.name},type={self.type},base_type={self.base_type},alias={self.alias}}}'
 
     @staticmethod
-    def create(name: str, props: Dict):
+    def create(name: str, props: Dict, ttype: str):
         return EnumType(
             name=name,
             type_='enum',
-            base_type=props.get('type', 'string'),
+            base_type=ttype,
             enum=props.get('enum', None),
             description=props.get('description', ''),
             defv=props.get('default', None)
@@ -158,7 +158,7 @@ class ArrayType(Type):
         return f'ArrayType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(data: Dict, name: str, props: Dict):
+    def create(data: Dict, name: str, props: Dict, ttype: str):
         item_type = None
         if 'items' in props:
             item_type = load_type(data, 'items', props['items'])
@@ -169,7 +169,7 @@ class ArrayType(Type):
 
         return ArrayType(
             name=name,
-            type_=props.get('type', 'array'),
+            type_=ttype,
             item_type=item_type,
             item_name=props.get('itemName', 'entry'),
             description=props.get('description', ''),
@@ -199,7 +199,7 @@ class DictionaryType(Type):
         return f'DictionaryType{{name={self.name},type={self.type},alias={self.alias}}}'
 
     @staticmethod
-    def create(data: Dict, name: str, props: Dict):
+    def create(data: Dict, name: str, props: Dict, ttype: str):
         key_type = None
         if 'type' in props['keys']:
             key_type = load_type(data, 'type', props['keys'])
@@ -219,7 +219,7 @@ class DictionaryType(Type):
 
         return DictionaryType(
             name=name,
-            type_=props.get('type', 'dict'),
+            type_=ttype,
             key_type=key_type,
             value_type=value_type,
             description=props.get('description', ''),
@@ -272,7 +272,7 @@ class ObjectType(Type):
         return f'ObjectType{{name={self.name},type={self.type},alias={self.alias},fields={self.fields},xml={self.xml}}}'
 
     @staticmethod
-    def create(data: Dict, name: str, props: Dict):
+    def create(data: Dict, name: str, props: Dict, ttype: str):
         fields = []
         required_fields = props.get('required', [])
         xml = props.get('xml', {})
@@ -290,7 +290,7 @@ class ObjectType(Type):
                     )
         return ObjectType(
             name=name,
-            type_=props.get('type', 'object'),
+            type_=ttype,
             description=props.get('description', ''),
             fields=fields,
             xml=xml
@@ -327,32 +327,38 @@ def load_type(data: Dict, name: str, props: Dict) -> Optional[Type]:
 
 def load_type_(data: Dict, name: str, props: Dict) -> Optional[Type]:
     if 'type' in props:
-        if props['type'] in ['int', 'integer', 'number', 'uint', 'unsigned']:
+        if props['type'] in ['int', 'integer', 'number']:
             if 'enum' in props.keys():
-                return EnumType.create(name, props)
+                return EnumType.create(name, props, ttype='int')
             else:
-                return IntegerType.create(name, props)
+                return IntegerType.create(name, props, ttype='int')
+
+        if props['type'] in ['uint', 'unsigned']:
+            if 'enum' in props.keys():
+                return EnumType.create(name, props, ttype='uint')
+            else:
+                return IntegerType.create(name, props, ttype='uint')
 
         if props['type'] in ['float', 'double']:
-            return FloatingType.create(name, props)
+            return FloatingType.create(name, props, ttype=props['type'])
 
         if props['type'] in ['bool', 'boolean']:
-            return BooleanType.create(name, props)
+            return BooleanType.create(name, props, ttype='bool')
 
         if props['type'] in ['string']:
             if 'enum' in props.keys():
-                return EnumType.create(name, props)
+                return EnumType.create(name, props, ttype='string')
             else:
-                return StringType.create(name, props)
+                return StringType.create(name, props, ttype='string')
 
         if props['type'] in ['array', 'list']:
-            return ArrayType.create(data, name, props)
+            return ArrayType.create(data, name, props, ttype='array')
 
         if props['type'] in ['dict', 'dictionary', 'map']:
-            return DictionaryType.create(data, name, props)
+            return DictionaryType.create(data, name, props, ttype='dict')
 
         if props['type'] in ['object']:
-            return ObjectType.create(data, name, props)
+            return ObjectType.create(data, name, props, ttype='object')
 
     elif '$ref' in props:
         return load_ref_type(data, name, props)
