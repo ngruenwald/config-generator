@@ -1,96 +1,39 @@
-{%- import '_macros.j2' as m -%}
+{%- set opt = {} -%}
+{%- from "_options.j2" import set_options with context -%}
+{{- set_options(opt) -}}
+{%- from "_options.j2" import set_opt with context -%}
+{{- set_opt(opt, 'use_element_names', True) -}}
+{%- extends "base_config.cpp.j2" -%}
 
-{#-
-  Renders forward declarations for load functions
-  @param types         List of types [objects]
-  @param unique_types  List of unique type names [strings]
--#}
-{%- macro forward_declarations(types, unique_types) -%}
-{%- for type in types -%}
-{%- if type.type == 'object' and type.name in unique_types -%}
-struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(const xml::Node& node);
-{% endif -%}
-{%- endfor -%}
-{%- endmacro -%}
-
-{#-
-  Renders a list of load functions
-  @param types         List of types [objects]
-  @param unique_types  List of unique type names [strings]
--#}
-{%- macro load_functions(types, unique_types) -%}
-{%- if types -%}
-{%- for type in types -%}
-{%- if type.type == 'object' and type.name in unique_types %}
-{{ load_function(type) }}
-{% endif -%}
-{%- endfor -%}
-{%- endif -%}
-{%- endmacro -%}
-
-{%- macro load_function(type) -%}
-static struct {{ m.type_case(type.name) }} Load{{ m.type_case(type.name) }}(
-    const pugi::xml_node& node)
-{
-    struct {{ m.type_case(type.name) }} config;
-{% filter indent(4) %}
-{{ load_fields('config.', type.fields, True) }}
-{%- endfilter %}
-    return config;
-}
-{%- endmacro -%}
-
-{%- macro load_fields(prefix, fields, as_attr) -%}
-{%- for field in fields -%}
-{{ load_field(prefix, field, as_attr) }}
-{% endfor -%}
-{%- endmacro -%}
-
-{%- macro load_field(prefix, field, as_attr) -%}
-{% if field.required %}XML_MANDATORY({% else %}XML_OPTIONAL({% endif -%}
-{{ prefix }}{{ m.value_case(field.name) }} =
-{%- if field.type.type in ['object'] %} Load{{ m.type_case(field.type.name) }}(get_child(node, "{{ field.type.alias }}"))
-{%- elif field.type.type in ['array', 'list'] %} load_array<{{ m.type_name(m.get_type(field.type.item_type)) }}>(get_child(node, "{{ field.type.alias }}"), "{{ field.type.item_name }}", Load{{ m.type_case(m.get_type(field.type.item_type)) }})
-{%- elif field.type.type in ['dict', 'dictionary', 'map'] %} (load_dict<{{ m.type_name(m.get_type(field.type.key_type)) }}, {{ m.type_name(m.get_type(field.type.value_type)) }}>(get_child(node, "{{ field.type.alias }}"), "entry", Load{{ m.type_case(m.get_type(field.type.key_type)) }}, Load{{ m.type_case(m.get_type(field.type.value_type)) }}))
-{%- elif field.type.type in ['enum'] %}
-  {%- if field.type.base_type in ['string'] %} load_enum<{{ m.type_case(field.type.name) }}>(node, "{{ field.type.alias }}")
-  {%- else -%}
-  {%- if as_attr %} config::from_string<{{ m.type_name(field.type.base_type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
-  {%- else %} config::from_string<{{ m.type_name(field.type_base_type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
-  {%- endif %}
-  {%- endif %}
-{%- else -%}
-  {%- if as_attr %} config::from_string<{{ m.type_name(field.type.type) }}>(get_attr(node, "{{ field.name }}").value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
-  {%- else %} config::from_string<{{ m.type_name(field.type.type) }}>(get_child(node, "{{ field.name }}").child_value(){% if field.type.base and field.type.base != 10 %}, {{ field.type.base }}{% endif %})
-  {%- endif %}
-{%- endif -%}
-);
-{%- endmacro -%}
-
-// This file has been generated. Do not modify.
-
-#include <functional>
-#include <iostream>
-
+{% block specific_includes %}
+#include <memory>
+#include <optional>
+#include <sstream>
 #include <pugixml.hpp>
+{% endblock %}
 
-#include "{{ options['output_prefix'] | default('') }}config.hpp"
+{% block specific_code %}
+struct PugiData
+{
+    std::shared_ptr<pugi::xml_document> doc;
+    std::optional<pugi::xml_node> node;
+    std::optional<pugi::xml_attribute> attr;
 
+    PugiData() {}
 
-#define XML_MANDATORY(x) try { x; } catch (...) { throw; }
-#define XML_OPTIONAL(x)  try { x; } catch (...) { }
+    PugiData(pugi::xml_node n) : node{std::move(n)} {}
+    PugiData(pugi::xml_attribute a) : attr{std::move(a)} {}
 
-{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
-{%- for namespace in options['cpp']['namespaces'] %}
-namespace {{ namespace }} {
-{%- endfor %}
-{%- else %}
-namespace config {
-{%- endif %}
+    PugiData(std::shared_ptr<pugi::xml_document> d, pugi::xml_node n) : doc{d}, node{std::move(n)} {}
+    PugiData(std::shared_ptr<pugi::xml_document> d, pugi::xml_attribute a) : doc{d}, attr{std::move(a)} {}
+};
 
-#include "from_string.hpp"
+constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
+constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
 
-static pugi::xml_node get_child(
+typedef struct PugiData config_data_t;
+
+inline pugi::xml_node get_child(
     const pugi::xml_node& node,
     const char* name)
 {
@@ -106,145 +49,170 @@ static pugi::xml_node get_child(
     return child;
 }
 
-static pugi::xml_attribute get_attr(
-    const pugi::xml_node& node,
-    const char* name)
+inline config_data_t load_file(
+    const std::string& filepath)
 {
-    auto attr = node.attribute(name);
+    auto data = config_data_t{};
+    data.doc = std::make_shared<pugi::xml_document>();
 
-    if (!attr)
+    auto result = data.doc->load_file(filepath.c_str());
+
+    if (!result)
     {
         std::ostringstream msg;
-        msg << "attribute '" << name << "' does not exist in '" << node.name() << "'";
+        msg << "XML [" << filepath << "] parsed with errors, attr value: [" << data.doc->child("node").attribute("attr").value() << "]\n";
+        msg << "Error description: " << result.description() << "\n";
+        msg << "Error offset: " << result.offset << " (error at [..." << (filepath.c_str() + result.offset) << "]";
+        throw std::runtime_error{msg.str()};
+    }
+
+    data.node = get_child(*data.doc, "config");
+
+    return data;
+}
+{% if opt.use_validate %}
+inline void validate(
+    const config_data_t& data)
+{
+}
+{% endif %}
+inline bool contains_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        {
+            const auto& attr = n.attribute(key);
+            if (attr)
+            {
+                return true;
+            }
+        }
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        {
+            const auto& node = n.child(key);
+            if (node)
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+inline config_data_t get_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        {
+            auto attr = n.attribute(key);
+            if (attr)
+            {
+                return PugiData{data.doc, attr};
+            }
+        }
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        {
+            auto node = n.child(key);
+            if (node)
+            {
+                return PugiData{data.doc, node};
+            }
+        }
+
+        std::ostringstream msg;
+        msg << "element/attribute '" << key << "' does not exist in '" << n.name() << "'";
         throw std::runtime_error(msg.str());
     }
 
-    return attr;
-}
-
-template<typename E>
-E load_enum(
-    const pugi::xml_node& node,
-    const char* attr)
-{
-    E e;
-    if (!from_string(get_attr(node, attr).value(), e))
-    {
-        throw std::invalid_argument("invalid enum value");
-    }
-    return e;
+    std::ostringstream msg;
+    msg << "invalid node";  // TODO: identify?
+    throw std::runtime_error(msg.str());
 }
 
 template<typename T>
-std::vector<T> load_array(
-    const pugi::xml_node& node,
-    const char* name,
-    std::function<T(const pugi::xml_node&)> f)
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    config_options opts)
 {
-    std::vector<T> v;
-    for (const auto& child : node.children(name))
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
     {
-        v.push_back(f(child));
+        if (data.attr.has_value())
+        {
+            value = config::from_string<T>(data.attr.value().as_string());
+            return;
+        }
     }
-    return v;
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node.has_value())
+        {
+            value = config::from_string<T>(data.node.value().child_value());
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
+    const T& data,
+    T& value,
+    [[maybe_unused]] config_options opts)
+{
+    value = data;
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    std::vector<T>& value,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+        for (const auto& child : n.children(opts.elementName))
+        {
+            T tmp;
+            from_data(PugiData{data.doc, child}, tmp, opts);
+            value.push_back(tmp);
+        }
+    }
 }
 
 template<typename K, typename V>
-std::map<K,V> load_dict(
-    const pugi::xml_node& node,
-    const char* name,
-    std::function<K(const pugi::xml_node&)> fk,
-    std::function<V(const pugi::xml_node&)> fv)
+inline void from_data(
+    const config_data_t& data,
+    std::map<K,V>& value,
+    config_options opts)
 {
-    std::map<K,V> m;
-    for (const auto& child : node.children(name))
+    if (data.node.has_value())
     {
-        auto key = fk(child.child("key"));
-        auto val = fv(child.child("value"));
-        m.insert(std::make_pair(key, val));
-    }
-    return m;
-}
-
-inline int LoadInt(
-    const pugi::xml_node& node)
-{
-    return config::from_string<int>(node.child_value());
-}
-
-inline float LoadFloat(
-    const pugi::xml_node& node)
-{
-    return config::from_string<float>(node.child_value());
-}
-
-inline double LoadDouble(
-    const pugi::xml_node& node)
-{
-    return config::from_string<double>(node.child_value());
-}
-
-inline bool LoadBool(
-    const pugi::xml_node& node)
-{
-    return config::from_string<bool>(node.child_value());
-}
-
-inline std::string LoadString(
-    const pugi::xml_node& node)
-{
-    return node.child_value();
-}
-
-// TODO: implement standard types
-
-{% if types -%}
-{{ load_functions(types, unique_types) }}
-{%- endif -%}
-{%- if elements -%}
-{{ load_functions(elements, unique_elements) }}
-{%- endif -%}
-
-std::unique_ptr<Config> LoadConfig(
-    const std::string& configPath)
-{
-{%- if elements %}
-    try
-    {
-        pugi::xml_document doc;
-        auto result = doc.load_file(configPath.c_str());
-
-        if (!result)
+        const auto& n = data.node.value();
+        for (const auto& child : n.children(opts.elementName))
         {
-            std::ostringstream msg;
-            msg << "XML [" << configPath << "] parsed with errors, attr value: [" << doc.child("node").attribute("attr").value() << "]\n";
-            msg << "Error description: " << result.description() << "\n";
-            msg << "Error offset: " << result.offset << " (error at [..." << (configPath.c_str() + result.offset) << "]";
-            throw std::runtime_error{msg.str()};
+            K key;
+            from_data(PugiData{data.doc, child.child("key")}, key, opts);
+            V val;
+            from_data(PugiData{data.doc, child.child("value")}, val, opts);
+            value.insert(std::make_pair(key, val));
         }
-
-        auto node = get_child(doc, "config");
-
-        auto config = std::make_unique<struct Config>();
-
-        {% filter indent(8) -%}
-        {{ load_fields('config->', config.fields, False) }}
-        {%- endfilter %}
-        return config;
     }
-    catch (const std::exception& ex)
-    {
-        throw;
-    }
-{%- endif %}
-
-    return {};
 }
-{% if options['cpp'] and options['cpp']['namespaces'] | default([]) | length > 0 %}
-{%- for namespace in options['cpp']['namespaces'] %}
-} // namespace {{ namespace }}
-{%- endfor %}
-{%- else %}
-} // namespace config
-{%- endif %}
-
+{% endblock %}

@@ -2,13 +2,11 @@
 
 This template creates code for reading XML configuration files.
 
+Extends [cpp-common-base](../cpp-common-base/README.md)
+
+NOTE: The default value for _options.cpp.use_validate_ is _True_.
+
 ## Dependencies
 
 * libxmlwrp
-* embedded_resources.h
-* enums.hpp (https://github.com/ngruenwald/fundus)
-* from_string.hpp (this repo)
-
-## Supported Options
-
-options.cpp.use_optional: True / False
+* embedded_resources.h  (when using validation)

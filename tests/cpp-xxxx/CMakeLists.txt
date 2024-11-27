@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
+list(APPEND CMAKE_MODULE_PATH cmake)
 
 project(test LANGUAGES CXX)
 
@@ -12,7 +13,7 @@ endif()
 message(STATUS "TEMPLATE: ${TEMPLATE}")
 
 include(FetchContent)
-include(cgen.cmake)
+include(cgen)
 
 if("${TEMPLATE}" STREQUAL "all")
   set(USE_JSON ON)
@@ -56,9 +57,24 @@ if(USE_TOML11)
 endif()
 
 if(USE_XMLWRP)
-  find_package(xmlwrp 3.4 QUIET)
+#  find_package(xmlwrp 3.4 QUIET)
+  find_package(LibXml2 QUIET REQUIRED)
+  add_library(xmlwrp STATIC IMPORTED)
+  add_library(xmlwrp::xmlwrp ALIAS xmlwrp)
+  set_target_properties(xmlwrp PROPERTIES INTERFACE_INCLUDE_DIRECTORIES /opt/eurofunk/include/xmlwrp/3.6.1)
+  set_target_properties(xmlwrp PROPERTIES IMPORTED_LOCATION /opt/eurofunk/lib64/libxmlwrp-3.6.1.a)
+  set_target_properties(xmlwrp PROPERTIES INTERFACE_LINK_LIBRARIES LibXml2::LibXml2)
+  set(xmlwrp_FOUND TRUE)
+
   if(xmlwrp_FOUND)
     magic(TEMPLATE cpp-xmlwrp DEPENDENCY xmlwrp::xmlwrp TESTFILE example.xml)
+
+    #
+    # xml schema magic
+    #
+
+    include(cgen2)
+    create_xsd_resource_for_target(cpp-xmlwrp ${CMAKE_SOURCE_DIR}/data/definition.yml)
   else()
     message(WARNING "xmlwrp not found - skipping test")
   endif()

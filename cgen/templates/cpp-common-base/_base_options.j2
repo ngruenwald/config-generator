@@ -1,0 +1,20 @@
+{%- macro set_opt(opt, key, value) -%}
+{%- if opt.update({key: value}) %}{% endif -%}
+{%- endmacro -%}
+
+{%- macro set_options(opt) -%}
+  {#- Defaults -#}
+  {{- set_opt(opt, "output_prefix", "") }}
+  {{- set_opt(opt, "namespaces", ["config"]) }}
+  {{- set_opt(opt, "use_optional", False) }}
+  {{- set_opt(opt, "use_printer", True) }}
+  {{- set_opt(opt, "use_validate", False ) }}
+  {#- Config -#}
+  {{- set_opt(opt, "output_prefix", options["output_prefix"] | default(opt.output_prefix)) }}
+  {%- if options["cpp"] -%}
+    {{- set_opt(opt, "namespaces", options["cpp"]["namespaces"] | default(opt.namespaces)) }}
+    {{- set_opt(opt, "use_optional", options["cpp"]["use_optional"] | default(opt.use_optional)) }}
+    {{- set_opt(opt, "use_print", options["cpp"]["use_print"] | default(opt.use_printer)) }}
+    {{- set_opt(opt, "use_validate", options["cpp"]["use_validate"] | default(opt.use_validate)) }}
+  {%- endif -%}
+{%- endmacro -%}

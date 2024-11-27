@@ -1,10 +1,11 @@
 an_integer = 0
 an_unsigned = 0
 a_string = "0"
-a_float = 0
-a_double = 0
+a_float = 0.0
+a_double = 0.0
 a_bool = false
 an_array = [ 0, 0 ]
+an_enum = "foo"
 
 [types]
 am = -1

@@ -71,5 +71,10 @@ int main(int argc, char** argv)
     TEST(config->types.pm[101].am == 1);
     TEST(config->types.pm[102].am == 2);
 
+    TEST(config->an_enum == config::LittleEnum::Foo);
+
+
+    std::cout << '\n' << *config << '\n';
+
     return errors;
 }

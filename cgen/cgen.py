@@ -173,8 +173,7 @@ def load_template_config(path: str):
 
 
 def create_path(path: str):
-    if not os.path.isdir(path):
-        os.mkdir(path)
+    os.makedirs(path, exist_ok = True)
 
 
 def render(env: Environment, template_file: str, output_path: str, data):
@@ -256,7 +255,20 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
 
         render_data['docs'] = create_render_data(render_data['config'].doc('config'))
 
-        file_loader = FileSystemLoader(template_path)
+        template_paths = [template_path]
+        try:
+            for dependency in template_config.get('template', {}).get('depends', []):
+                source = dependency.get('source', '')
+                if source:
+                    source_path = Path(source)
+                    if source_path.is_absolute():
+                        template_paths.append(source_path)
+                    else:
+                        template_paths.append(Path(template_path) / source_path)
+        except Exception:
+            pass
+
+        file_loader = FileSystemLoader(template_paths)  # [template_path, Path(template_path).parent])
         env = Environment(loader=file_loader)
 
         env.filters['camel_case'] = j2_camel_case
@@ -274,8 +286,12 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
                 render(env, file_name, output_path, render_data)
 
         for publish_path in template_config['template']['publish']:
-            source_path = Path(template_path) / Path(publish_path)
-            target_path = Path(output_path) / Path(publish_path)
+            if isinstance(publish_path, str):
+                source_path = Path(template_path) / Path(publish_path)
+                target_path = Path(output_path) / Path(publish_path)
+            else:
+                source_path = Path(template_path) / Path(publish_path['from'])
+                target_path = Path(output_path) / Path(publish_path['to'])
             if os.path.isdir(source_path):
                 shutil.copytree(source_path, target_path, dirs_exist_ok=True)
             else:

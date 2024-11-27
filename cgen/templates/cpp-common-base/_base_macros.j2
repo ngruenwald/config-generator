@@ -12,9 +12,9 @@
 
 {%- macro get_type(m) -%}
   {%- if m.type in ['string'] %}string
-  {%- elif m.type in ['int', 'integer', 'number'] %}int
-  {%- elif m.type in ['uint', 'unsigned'] %}uint
-  {%- elif m.type in ['bool', 'boolean'] %}bool
+  {%- elif m.type in ['int'] %}int
+  {%- elif m.type in ['uint'] %}uint
+  {%- elif m.type in ['bool'] %}bool
   {%- elif m.type in ['float'] %}float
   {%- elif m.type in ['double'] %}double
   {%- else %}{{ m.name }}
@@ -24,9 +24,9 @@
 {%- macro type_name(tn) -%}
 {%- if tn -%}
   {%- if tn in ['string'] %}std::string
-  {%- elif tn in ['int', 'integer', 'number'] %}int
-  {%- elif tn in ['uint', 'unsigned'] %}unsigned int
-  {%- elif tn in ['bool', 'boolean'] %}bool
+  {%- elif tn in ['int'] %}int
+  {%- elif tn in ['uint'] %}unsigned int
+  {%- elif tn in ['bool'] %}bool
   {%- elif tn in ['float'] %}float
   {%- elif tn in ['double'] %}double
   {%- else %}{{ type_case(tn) }}
@@ -139,4 +139,13 @@
 _
 {%- endif -%}
 {{ n }}
+{%- endmacro -%}
+
+{%- macro insert_opts(field) -%}
+
+{%- if field.type.type in ['array'] -%}
+{"{{ field.type.item_name | default('entry') }}"}
+{%- else -%}
+{}
+{%- endif -%}
 {%- endmacro -%}
