@@ -78,17 +78,41 @@ ENUMS(
 {% endmacro -%}
 
 {#-
-  Renders a list of structs
+  Renders a list of types
   @param types         List of types [objects]
   @param unique_types  List of unique type names [strings]
 -#}
-{%- macro insert_structs(types, unique_types) -%}
-{%- for type in types -%}
-{%- if type.type == "object" and type.name in unique_types -%}
+{%- macro insert_types(types, unique_types) -%}
+{%- for type in types %}
+{%- if type.name in unique_types %}
+{%- if type.type == "object" %}
 {{ insert_struct(type) }}
+{%- elif type.type == "array" %}
+{{ insert_vector(type) }}
+{%- elif type.type == "dict" %}
+{{ insert_map(type) }}
 {% endif -%}
+{%- endif -%}
 {%- endfor -%}
 {%- endmacro -%}
+
+{#-
+  Renders a vector
+  @param type  Array type [object]
+-#}
+{%- macro insert_vector(type) -%}
+{{ insert_description(type.description) }}
+typedef std::vector<{{ m.type_name(m.get_type(type.item_type)) }}> {{ m.type_case(type.name) }};
+{% endmacro -%}
+
+{#-
+  Renders a map
+  @param type  Dictionary type [object]
+-#}
+{%- macro insert_map(type) -%}
+{{ insert_description(type.description) }}
+typedef std::map<{{ m.type_name(m.get_type(type.key_type)) }}, {{ m.type_name(m.get_type(type.value_type)) }}> {{ m.type_case(type.name) }};
+{% endmacro -%}
 
 {#-
   Renders a struct
@@ -127,7 +151,7 @@ struct {{ m.type_case(type.name) }}
 {%- endif %}
 {{ insert_optional_struct(member) }};
 {%- elif member.type.type == "array" %}
-{{ insert_optional_vector(member) }} {{ m.value_case(member.name) }};
+{{ insert_optional_vector(member) }} {{ m.value_case(member.name) }}{{ default_value(member) }};
 {%- elif member.type.type == "dict" %}
 {{ insert_optional_map(member) }} {{ m.value_case(member.name) }};
 {%- elif member.type.type == "enum" %}
@@ -143,17 +167,35 @@ struct {{ m.type_case(type.name) }}
 
 {#-
 -#}
-{%- macro format_default_value(mt) -%}
-{%-   if mt.type in ["string"]            -%}"{{ mt.default }}"
-{%- elif mt.type in ["char", "character"] -%}"{{ mt.default }}"
-{%- elif mt.type in ["bool"]   -%}{{ "true" if mt.default else "false" }}
-{%- elif mt.type in ["int", "uint"] -%}{{ mt.default | base(mt.base) }}
-{%- elif mt.type in ["enum"] -%}
-  {%- if mt.base_type in ["string"] -%}{{ m.type_name(mt.name) }}::{{ m.enum_case(mt.default) }}
-  {%- elif mt.base_type in ["int", "uint"] -%}{{ mt.default | base(mt.base) }}
-  {%- else -%}{{ mt.default }}
+
+{%- macro _format_default_value(mt_type, mt_base_type, mt_default, mt_base) -%}
+{%-   if mt_type in ["string"] -%}"{{ mt_default }}"
+{%- elif mt_type in ["char", "character"] -%}'{{ mt_default }}'
+{%- elif mt_type in ["bool"] -%}{{ "true" if mt_default else "false" }}
+{%- elif mt_type in ["int", "uint"] -%}{{ mt_default | base(mt_base) }}
+{%- elif mt_type in ["enum"] -%}
+  {%- if mt_base_type in ["string"] -%}{{ m.type_name(mt.name) }}::{{ m.enum_case(mt_default) }}
+  {%- elif mt_base_type in ["int", "uint"] -%}{{ mt_default | base(mt_base) }}
+  {%- else -%}{{ mt_default }}
   {%- endif -%}
-{%- else -%}{{ mt.default }}
+{%- elif mt_type in ["array"] -%}
+  {%- for entry in mt_default -%}
+    "{{ entry }}"{% if not loop.last %}, {% endif %}
+  {%- endfor %}
+{%- else -%}{{ mt_default }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro format_default_value(mt) -%}
+{%-   if mt.type in ["array"] -%}
+  {%- for entry in mt.default -%}
+    {#- TODO... "complex" types? -#}
+    {{ _format_default_value(m.get_type(mt.item_type), "", entry, "") }}{% if not loop.last %}, {% endif %}
+  {%- endfor %}
+{%- elif mt.type in ["dict"] -%}
+  {#- TODO -#}
+{%- else -%}
+  {{ _format_default_value(mt.type, mt.base_type, mt.default, mt.base) }}
 {%- endif -%}
 {%- endmacro -%}
 
@@ -190,7 +232,7 @@ namespace {{ namespace }} {
 {%- endfor %}
 {% if types %}
 {{ insert_enums(types, unique_types) }}
-{{ insert_structs(types, unique_types) }}
+{{ insert_types(types, unique_types) }}
 {%- endif -%}
 
 {{ insert_struct(config) }}
