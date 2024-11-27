@@ -2,11 +2,8 @@
 
 This template creates code for reading JSON configuration files.
 
+Extends [cpp-common-base](../cpp-common-base/README.md)
+
 ## Dependencies
 
 * nlohmann/json (https://github.com/nlohmann/json)
-* enums.hpp (https://github.com/ngruenwald/fundus)
-
-## Supported Options
-
-options.cpp.use_optional: True / False
