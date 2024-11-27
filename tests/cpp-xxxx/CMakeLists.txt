@@ -75,38 +75,6 @@ if(USE_XMLWRP)
 
     include(cgen2)
     create_xsd_resource_for_target(cpp-xmlwrp ${CMAKE_SOURCE_DIR}/data/definition.yml)
-
-    # include(utils)
-    # include(embedded_resources)
-
-    # file(
-    #   COPY_FILE
-    #   "embedded_resources.h"
-    #   "${CMAKE_BINARY_DIR}/cgen-cpp-xmlwrp/embedded_resources.h"
-    #   ONLY_IF_DIFFERENT
-    # )
-
-    # cgen(
-    #   codegen-cpp-xmlwrp-xsd
-    #   "xsd"
-    #   "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/data/definition.yml"
-    #   "${CMAKE_CURRENT_BINARY_DIR}/cgen-cpp-xmlwrp-xsd"
-    #   "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../.."
-    # )
-
-    # add_dependencies(cpp-xmlwrp codegen-cpp-xmlwrp-xsd)
-
-    # xd(
-    #   "${CMAKE_CURRENT_BINARY_DIR}/cgen-cpp-xmlwrp-xsd/config.xsd"
-    #   "${CMAKE_CURRENT_BINARY_DIR}/cgen-cpp-xmlwrp-xsd/config_xsd.cpp"
-    #   "_binary_xsd_config_xsd"
-    # )
-
-    # target_sources(
-    #   cpp-xmlwrp
-    #   "${CMAKE_CURRENT_BINARY_DIR}/cgen-cpp-xmlwrp-xsd/config_xsd.cpp"
-    #   "${CMAKE_CURRENT_BINARY_DIR}/cgen-cpp-xmlwrp/embedded_resources.h"
-    # )
   else()
     message(WARNING "xmlwrp not found - skipping test")
   endif()
