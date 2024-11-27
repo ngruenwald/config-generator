@@ -7,7 +7,7 @@ options:
   cpp:
     use_optional: True
     use_printer: True
-    use_validate: True
+    # use_validate: True
 
 elements:
   types:
