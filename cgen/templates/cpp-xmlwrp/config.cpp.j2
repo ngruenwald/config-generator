@@ -4,3 +4,213 @@
 {%- from "_options.j2" import set_opt with context -%}
 {{- set_opt(opt, 'use_element_names', True) -}}
 {%- extends "base_config.cpp.j2" -%}
+
+{% block specific_includes %}
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+
+#include <libxmlwrp.hpp>
+{% if opt.use_validate %}
+#include "embedded_resources.h"
+
+static void get_schema_data(
+    const char*& buffer,
+    size_t& size)
+{
+    BINARY_RESOURCE_DATA(xsd_data, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+    BINARY_RESOURCE_SIZE(xsd_size, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+
+    buffer = reinterpret_cast<const char*>(xsd_data);
+    size = xsd_size;
+}
+{% endif %}
+{% endblock %}
+
+{% block specific_code %}
+struct XmlWrpData
+{
+    std::shared_ptr<xml::Document> doc;
+    std::optional<xml::Node> node;
+    std::optional<std::string> prop;
+
+    XmlWrpData() {}
+    XmlWrpData(xml::Node n) : node{std::move(n)} {}
+    XmlWrpData(std::string p) : prop{std::move(p)} {}
+    XmlWrpData(std::shared_ptr<xml::Document> d, xml::Node n) : doc{d}, node{std::move(n)} {}
+    XmlWrpData(std::shared_ptr<xml::Document> d, std::string p) : doc{d}, prop{std::move(p)} {}
+};
+
+constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
+constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
+
+typedef struct XmlWrpData config_data_t;
+
+inline config_data_t load_file(
+    const std::string& filepath)
+{
+    auto data = config_data_t{};
+    data.doc = std::make_shared<xml::Document>(filepath.c_str());
+    data.node = data.doc->GetRootNode();
+    return data;
+}
+{% if opt.use_validate %}
+inline void validate(
+    const config_data_t& data)
+{
+    const char* xsd_data;
+    size_t xsd_size = 0;
+    get_schema_data(xsd_data, xsd_size);
+
+    xml::Schema schema{xsd_data, xsd_size};
+
+    if (!schema.IsValid(*data.doc))
+    {
+        throw xml::Exception("ERROR: configuration is not valid");
+    }
+}
+{% endif %}
+inline bool contains_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        {
+            if (data.node.value().HasProp(key))
+            {
+                return true;
+            }
+        }
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        {
+            try
+            {
+                // TODO
+                auto child = data.node.value().GetChild(key);
+                return true;
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+
+    return false;
+}
+
+inline config_data_t get_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        {
+            try
+            {
+                return XmlWrpData{data.doc, data.node.value().GetStringProp(key)};
+            }
+            catch (...)
+            {
+            }
+        }
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        {
+            try
+            {
+                return XmlWrpData{data.doc, data.node.value().GetChild(key)};
+            }
+            catch (...)
+            {
+            }
+        }
+
+        std::ostringstream msg;
+        msg << "element/attribute '" << key << "' does not exist in '" << data.node.value().GetName() << "'";
+        throw std::runtime_error(msg.str());
+    }
+
+    std::ostringstream msg;
+    msg << "invalid node";  // TODO: identify?
+    throw std::runtime_error(msg.str());
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    config_options opts)
+{
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (data.prop.has_value())
+        {
+            value = config::from_string<T>(data.prop.value());
+            return;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node.has_value())
+        {
+            value = config::from_string<T>(data.node.value().GetStringVal());
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
+    const T& data,
+    T& value,
+    [[maybe_unused]] config_options opts)
+{
+    value = data;
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    std::vector<T>& value,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+        for (const auto& child : n.GetChildren(opts.elementName))
+        {
+            T tmp;
+            from_data(XmlWrpData{data.doc, child}, tmp, opts);
+            value.push_back(tmp);
+        }
+    }
+}
+
+template<typename K, typename V>
+inline void from_data(
+    const config_data_t& data,
+    std::map<K,V>& value,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+        for (const auto& child : n.GetChildren(opts.elementName))
+        {
+            K key;
+            from_data(XmlWrpData{data.doc, child.GetChild("key")}, key, opts);
+            V val;
+            from_data(XmlWrpData{data.doc, child.GetChild("value")}, val, opts);
+            value.insert(std::make_pair(key, val));
+        }
+    }
+}
+{% endblock %}

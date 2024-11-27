@@ -102,9 +102,8 @@ void print<{{ m.type_case(type.name) }}>(
 #include <iomanip>
 {%- endif %}
 #include <iostream>
-
-{% include "_inc.hpp.j2" %}
-
+{% block specific_includes %}
+{% endblock %}
 #include "{{ opt.output_prefix }}config.hpp"
 {% for namespace in opt.namespaces %}
 namespace {{ namespace }} {
@@ -130,9 +129,8 @@ struct config_options
 //
 // specific
 //
-
-{% include "_func.hpp.j2" %}
-
+{% block specific_code %}
+{% endblock %}
 //
 // common
 //

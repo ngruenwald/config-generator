@@ -4,3 +4,215 @@
 {%- from "_options.j2" import set_opt with context -%}
 {{- set_opt(opt, 'use_element_names', True) -}}
 {%- extends "base_config.cpp.j2" -%}
+
+{% block specific_includes %}
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <pugixml.hpp>
+{% endblock %}
+
+{% block specific_code %}
+struct PugiData
+{
+    std::shared_ptr<pugi::xml_document> doc;
+    std::optional<pugi::xml_node> node;
+    std::optional<pugi::xml_attribute> attr;
+
+    PugiData() {}
+
+    PugiData(pugi::xml_node n) : node{std::move(n)} {}
+    PugiData(pugi::xml_attribute a) : attr{std::move(a)} {}
+
+    PugiData(std::shared_ptr<pugi::xml_document> d, pugi::xml_node n) : doc{d}, node{std::move(n)} {}
+    PugiData(std::shared_ptr<pugi::xml_document> d, pugi::xml_attribute a) : doc{d}, attr{std::move(a)} {}
+};
+
+constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
+constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
+
+typedef struct PugiData config_data_t;
+
+inline pugi::xml_node get_child(
+    const pugi::xml_node& node,
+    const char* name)
+{
+    auto child = node.child(name);
+
+    if (!child)
+    {
+        std::ostringstream msg;
+        msg << "element '" << name << "' does not exist in '" << node.name() << "'";
+        throw std::runtime_error(msg.str());
+    }
+
+    return child;
+}
+
+inline config_data_t load_file(
+    const std::string& filepath)
+{
+    auto data = config_data_t{};
+    data.doc = std::make_shared<pugi::xml_document>();
+
+    auto result = data.doc->load_file(filepath.c_str());
+
+    if (!result)
+    {
+        std::ostringstream msg;
+        msg << "XML [" << filepath << "] parsed with errors, attr value: [" << data.doc->child("node").attribute("attr").value() << "]\n";
+        msg << "Error description: " << result.description() << "\n";
+        msg << "Error offset: " << result.offset << " (error at [..." << (filepath.c_str() + result.offset) << "]";
+        throw std::runtime_error{msg.str()};
+    }
+
+    data.node = get_child(*data.doc, "config");
+
+    return data;
+}
+{% if opt.use_validate %}
+inline void validate(
+    const config_data_t& data)
+{
+}
+{% endif %}
+inline bool contains_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        {
+            const auto& attr = n.attribute(key);
+            if (attr)
+            {
+                return true;
+            }
+        }
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        {
+            const auto& node = n.child(key);
+            if (node)
+            {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+inline config_data_t get_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        {
+            auto attr = n.attribute(key);
+            if (attr)
+            {
+                return PugiData{data.doc, attr};
+            }
+        }
+
+        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        {
+            auto node = n.child(key);
+            if (node)
+            {
+                return PugiData{data.doc, node};
+            }
+        }
+
+        std::ostringstream msg;
+        msg << "element/attribute '" << key << "' does not exist in '" << n.name() << "'";
+        throw std::runtime_error(msg.str());
+    }
+
+    std::ostringstream msg;
+    msg << "invalid node";  // TODO: identify?
+    throw std::runtime_error(msg.str());
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    config_options opts)
+{
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (data.attr.has_value())
+        {
+            value = config::from_string<T>(data.attr.value().as_string());
+            return;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node.has_value())
+        {
+            value = config::from_string<T>(data.node.value().child_value());
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
+    const T& data,
+    T& value,
+    [[maybe_unused]] config_options opts)
+{
+    value = data;
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    std::vector<T>& value,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+        for (const auto& child : n.children(opts.elementName))
+        {
+            T tmp;
+            from_data(PugiData{data.doc, child}, tmp, opts);
+            value.push_back(tmp);
+        }
+    }
+}
+
+template<typename K, typename V>
+inline void from_data(
+    const config_data_t& data,
+    std::map<K,V>& value,
+    config_options opts)
+{
+    if (data.node.has_value())
+    {
+        const auto& n = data.node.value();
+        for (const auto& child : n.children(opts.elementName))
+        {
+            K key;
+            from_data(PugiData{data.doc, child.child("key")}, key, opts);
+            V val;
+            from_data(PugiData{data.doc, child.child("value")}, val, opts);
+            value.insert(std::make_pair(key, val));
+        }
+    }
+}
+{% endblock %}
