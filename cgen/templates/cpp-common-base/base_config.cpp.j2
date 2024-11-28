@@ -420,6 +420,31 @@ struct std::unique_ptr<{{ m.type_case(config.name) }}> LoadConfig(
 
     return {};
 }
+
+/*
+{{ opt }}
+*/
+
+{%- if opt.use_validate %}
+bool ValidateConfig(
+    const std::string& configPath,
+    std::ostream& os)
+{
+    try
+    {
+        auto data = load_file(configPath);
+        validate(data);
+        return true;
+    }
+    catch (const std::exception& ex)
+    {
+        os << ex.what() << "\n\n";
+    }
+
+    return false;
+}
+{%- endif %}
+
 {% for namespace in opt.namespaces %}
 } // namespace {{ namespace }}
 {%- endfor %}

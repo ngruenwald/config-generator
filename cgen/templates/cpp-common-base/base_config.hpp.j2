@@ -248,6 +248,15 @@ std::ostream& operator<<(
 std::unique_ptr<Config> LoadConfig(
     const std::string& configPath);
 
+{%- if opt.use_validate %}
+/// Validates the configuration file against the internal schema
+/// @param[in] configPath Location of the configuration file
+/// @returns True if the the configuration is valid, otherwise False
+bool ValidateConfig(
+    const std::string& configPath,
+    std::ostream& os = std::cerr);
+{%- endif %}
+
 {%- for namespace in opt.namespaces %}
 } // namespace {{ namespace }}
 {%- endfor %}
