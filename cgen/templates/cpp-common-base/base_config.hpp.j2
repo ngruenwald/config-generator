@@ -124,7 +124,7 @@ struct {{ m.type_case(type.name) }}
 {
 {%- filter indent(4) -%}
 {{ insert_members(type.fields) }}
-{% endfilter -%}
+{%- endfilter -%}
 };
 {% endmacro -%}
 
@@ -167,7 +167,6 @@ struct {{ m.type_case(type.name) }}
 
 {#-
 -#}
-
 {%- macro _format_default_value(mt_type, mt_base_type, mt_default, mt_base) -%}
 {%-   if mt_type in ["string"] -%}"{{ mt_default }}"
 {%- elif mt_type in ["char", "character"] -%}'{{ mt_default }}'
@@ -215,6 +214,9 @@ struct {{ m.type_case(type.name) }}
 #pragma once
 
 #include <cstdint>
+{% if opt.use_validate -%}
+#include <iostream>
+{%- endif %}
 #include <map>
 #include <memory>
 {% if opt.use_optional -%}
@@ -231,9 +233,9 @@ struct {{ m.type_case(type.name) }}
 namespace {{ namespace }} {
 {%- endfor %}
 {% if types %}
-{{ insert_enums(types, unique_types) }}
+{{ insert_enums(types, unique_types) -}}
 {{ insert_types(types, unique_types) }}
-{%- endif -%}
+{%- endif %}
 
 {{ insert_struct(config) }}
 {% if opt.use_printer -%}
@@ -247,16 +249,15 @@ std::ostream& operator<<(
 /// @returns Configuration structure via unique pointer
 std::unique_ptr<Config> LoadConfig(
     const std::string& configPath);
-
-{%- if opt.use_validate %}
+{% if opt.use_validate %}
 /// Validates the configuration file against the internal schema
 /// @param[in] configPath Location of the configuration file
 /// @returns True if the the configuration is valid, otherwise False
 bool ValidateConfig(
     const std::string& configPath,
     std::ostream& os = std::cerr);
-{%- endif %}
+{% endif -%}
 
-{%- for namespace in opt.namespaces %}
+{% for namespace in opt.namespaces %}
 } // namespace {{ namespace }}
 {%- endfor %}

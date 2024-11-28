@@ -105,6 +105,7 @@ void print<{{ m.type_case(type.name) }}>(
 {% block specific_includes %}
 {% endblock %}
 #include "{{ opt.output_prefix }}config.hpp"
+{%- block specific_code_no_namespace %}{% endblock %}
 {% for namespace in opt.namespaces %}
 namespace {{ namespace }} {
 {%- endfor %}
@@ -120,7 +121,7 @@ struct config_options
     unsigned long flags{0};
     const char* elementName{"entry"};
 
-    config_options() {}
+    config_options() = default;
     config_options(unsigned long f) : flags{f} {}
     config_options(const char* en) : elementName{en} {}
     config_options(unsigned long f, const char* en) : flags{f}, elementName{en} {}
@@ -273,7 +274,8 @@ void print(
     }
 }
 
-{% if opt.use_optional -%}
+{%- if opt.use_optional %}
+
 template<typename T>
 void print(
     std::ostream& os,
@@ -287,7 +289,8 @@ void print(
     }
     print(os, config.value(), indentLevel, prefix);
 }
-{%- endif %}
+
+{% endif %}
 
 template<>
 void print<bool>(
@@ -333,7 +336,8 @@ void print(
     os << std::dec << "\n";
 }
 
-{% if opt.use_optional -%}
+{%- if opt.use_optional %}
+
 template<typename T>
 void print(
     std::ostream& os,
@@ -348,23 +352,22 @@ void print(
     }
     print(os, value.value(), base, indentLevel, prefix);
 }
-{%- endif %}
+
+{% endif -%}
 {%- endif %}
 
 //
 // custom
 //
-
 {% if types -%}
-{{ enum_load_functions(types, unique_types) }}
+{{ enum_load_functions(types, unique_types) -}}
 {{ load_functions(types, unique_types) }}
 {%- endif -%}
 {%- if elements -%}
 {{ load_functions(elements, unique_elements) }}
 {%- endif %}
-
 {% if opt.use_printer -%}
-{% if types -%}
+{%- if types -%}
 {{ print_functions(types, unique_types) }}
 {%- endif -%}
 {%- if elements -%}
@@ -421,11 +424,8 @@ struct std::unique_ptr<{{ m.type_case(config.name) }}> LoadConfig(
     return {};
 }
 
-/*
-{{ opt }}
-*/
-
 {%- if opt.use_validate %}
+
 bool ValidateConfig(
     const std::string& configPath,
     std::ostream& os)
@@ -444,7 +444,6 @@ bool ValidateConfig(
     return false;
 }
 {%- endif %}
-
 {% for namespace in opt.namespaces %}
 } // namespace {{ namespace }}
 {%- endfor %}
