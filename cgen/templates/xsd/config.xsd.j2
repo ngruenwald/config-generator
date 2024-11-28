@@ -70,7 +70,7 @@
 -#}
 {%- macro insert_description(x, ind) -%}
 {%- if x.description -%}
-{%- filter indent(ind) %}
+{% filter indent(ind) %}
 <xs:annotation>
   <xs:documentation>
     {{ escape_string(x.description) }}
@@ -90,7 +90,7 @@
 {%- if x.type.constraints | default([]) | length > 0 -%}
 {%- filter indent(ind) %}
 {%- for constraint in x.type.constraints %}
-{%- if constraint.type == 'unique' -%}
+{%- if constraint.type == 'unique' %}
 <xs:unique name="{{ constraint.id }}">
   <xs:selector xpath="{{ '/'.join(constraint.field.split('/')[0:-1]) }}" />
   <xs:field xpath="@{{ constraint.field.split('/')[-1] }}" />
@@ -124,7 +124,7 @@
 {%- elif type_name(attr.type) in ['hex64'] %} default="{{ '%016X' % attr.type.default | int }}"
 {%- else %} default="{{ escape_string(attr.type.default) }}"{% endif -%}
 {%- endif -%}
->{{ insert_description(attr, 2) }}
+>{{ insert_description(attr, 0) }}
 {%- if attr.type.name not in unique_types and (attr.type.min or attr.type.max or attr.type.pattern) %}
   <xs:simpleType>
     <xs:restriction base="{{ type_name(attr.type) }}">
@@ -159,13 +159,17 @@
 {%- macro insert_element2(element, required) -%}
 {%- if element.type in ['object'] -%}
 <xs:element name="{{ element.name }}"
+{%- filter indent(2) -%}
 {%- if not required %} minOccurs="0"{% endif -%}
 >
 {% if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
-  <xs:complexType>
-    {{ insert_complexTypeInner(element) }}
-  </xs:complexType>
+<xs:complexType>
+{%- filter indent(2) -%}
+{{ insert_complexTypeInner(element) }}
+{%- endfilter %}
+</xs:complexType>
 {%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
+{%- endfilter %}
 </xs:element>
 {%- elif element.type.type in ['object', 'dict'] -%}
 {#<xs:element name="{{ element.name }}" type="{{ element.type.name }}"#}
@@ -173,9 +177,9 @@
 {%- if not required %} minOccurs="0"{% endif -%}
 >
 {%- if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
-{%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
+{%- if true -%}{{ insert_constraints(element, 2) }}{%- endif %}
 </xs:element>
-{%- elif element.type.type in ['array'] -%}
+{%- elif element.type.type in ['array'] %}
 <xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"
 {%- if element.type.minsize is not none %} minOccurs="{{ element.type.minsize }}"{% else %} minOccurs="0"{% endif -%}
 {%- if element.type.maxsize is not none %} maxOccurs="{{ element.type.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
@@ -201,10 +205,12 @@
 -#}
 {%- macro insert_complexType(t) -%}
 <xs:complexType name="{{ t.name }}">
-{% filter indent(2) %}
-{%- if t.description %}{{ insert_description(t.description, 0) }}{% endif %}
+{%- filter indent(2) -%}
+{%- if t.description -%}
+{{ insert_description(t.description, 0) }}
+{%- endif -%}
 {{ insert_complexTypeInner(t) }}
-{% endfilter %}
+{%- endfilter -%}
 </xs:complexType>
 {%- endmacro -%}
 
@@ -216,51 +222,53 @@
 -#}
 {%- macro insert_complexTypeInner(t) -%}
 {%- if t.type in ['array'] %}
-  <xs:sequence>
-    <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" type="{{ type_name(t.item_type, unique_types) }}"
-    {%- if t.minsize is not none %} minOccurs="{{ t.minsize }}"{% else %} minOccurs="0"{% endif -%}
-    {%- if t.maxsize is not none %} maxOccurs="{{ t.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
-    />
-  </xs:sequence>
+<xs:sequence>
+  <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" type="{{ type_name(t.item_type, unique_types) }}"
+  {%- if t.minsize is not none %} minOccurs="{{ t.minsize }}"{% else %} minOccurs="0"{% endif -%}
+  {%- if t.maxsize is not none %} maxOccurs="{{ t.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
+  />
+</xs:sequence>
 {%- elif t.type in ['object'] %}
 {#- determine number of elements in object -#}
 {%- set tmp = {'num_elements': 0} -%}
 {%- for f in t.fields -%}
 {%- if f.type.type in ['object', 'array', 'dict'] -%}
-{%- if tmp.update({'num_elements': tmp['num_elements'] + 1}) %}{% endif %}
+{%- if tmp.update({'num_elements': tmp['num_elements'] + 1}) %}{% endif -%}
 {%- endif -%}
 {%- endfor -%}
-{%- if tmp['num_elements'] > 0 %}
+{%- if tmp['num_elements'] > 0 -%}
   {%- if t['xml']['type'] | default('sequence') == 'choice' %}
-  <xs:choice minOccurs="{{ t['xml']['min'] | default(1) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
+<xs:choice minOccurs="{{ t['xml']['min'] | default(1) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
   {%- else %}
-  <xs:{{ t['xml']['type'] | default('sequence') }}>
+<xs:{{ t['xml']['type'] | default('sequence') }}>
   {%- endif -%}
-  {%- filter indent(2) %}
-  {% for f in t.fields -%}
+  {%- filter indent(2) -%}
+  {%- for f in t.fields -%}
   {%- if f.type.type in ['object', 'array', 'dict'] -%}
-  {{ insert_element2(f, f.required) }}
-  {% endif -%}
+{{ insert_element2(f, f.required) }}
+  {%- endif %}
   {%- endfor -%}
   {%- endfilter %}
-  </xs:{{ t['xml']['type'] | default('sequence') }}>
-{%- endif %}
+</xs:{{ t['xml']['type'] | default('sequence') }}>
+{% endif %}
+  {% filter indent(2) %}
   {%- for f in t.fields -%}
-  {%- if not f.type.type in ['object', 'array', 'dict'] %}
-  {% filter indent(2) %}{{ insert_attribute(f, f.required) }}{% endfilter %}
-  {%- endif -%}
+  {%- if not f.type.type in ['object', 'array', 'dict'] -%}
+{{ insert_attribute(f, f.required) }}
+  {%- endif %}
   {%- endfor -%}
+  {%- endfilter %}
 {%- elif t.type in ['dict'] %}
-  <xs:sequence>
-    <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" minOccurs="0" maxOccurs="unbounded">
-      <xs:complexType>
-        <xs:sequence>
-          <xs:element name="key" type="{{ type_name(t.key_type, unique_types) }}" />
-          <xs:element name="value" type="{{ type_name(t.value_type, unique_types) }}" />
-        </xs:sequence>
-      </xs:complexType>
-    </xs:element>
-  </xs:sequence>
+<xs:sequence>
+  <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" minOccurs="0" maxOccurs="unbounded">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="key" type="{{ type_name(t.key_type, unique_types) }}" />
+        <xs:element name="value" type="{{ type_name(t.value_type, unique_types) }}" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:sequence>
 {%- else -%}
     <!-- unknown type "{{ t }}" -->
 {%- endif %}
@@ -272,7 +280,7 @@
 
   param t  The type.
 -#}
-{%- macro simpleType(t) -%}
+{%- macro insert_simpleType(t) -%}
 <xs:simpleType name="{{ t.name }}">
 {%- if t.description %}{{ insert_description(t.description, 2) }}{% endif %}
   <xs:restriction base="{{ type_name(t, []) }}">
@@ -309,11 +317,11 @@
 
   param t  The type.
 -#}
-{%- macro type(t) -%}
+{%- macro insert_type(t) -%}
 {%- if t.type in ['object', 'array', 'dict'] -%}
 {{ insert_complexType(t) }}
 {%- else -%}
-{{ simpleType(t) }}
+{{ insert_simpleType(t) }}
 {%- endif -%}
 {%- endmacro -%}
 
@@ -321,20 +329,18 @@
 
 <?xml version="1.0" encoding="utf-8" ?>
 <xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-
+{% filter indent(2) %}
 <!-- This file has been generated. Do not modify. -->
 
 {{ insert_element2(config, True) }}
-
-{%- filter indent(2) -%}
-{%- for e in elements -%}
+{% for e in elements -%}
 {% if e.name in unique_elements %}
-{{ type(e) }}
+{{ insert_type(e) }}
 {% endif %}
 {%- endfor -%}
 {%- for t in types -%}
 {% if t.name in unique_types %}
-{{ type(t) }}
+{{ insert_type(t) }}
 {% endif %}
 {%- endfor -%}
 {%- endfilter %}
