@@ -117,7 +117,8 @@
 {%- if not (attr.type.name not in unique_types and (attr.type.min or attr.type.max or attr.type.pattern)) %} type="{{ type_name(attr.type, unique_types) }}"{% endif -%}
 {%- if required %} use="required"{% else %} use="optional"{% endif -%}
 {%- if not required and attr.type.default is not none -%}
-{%- if type_name(attr.type) in ['hex8'] %} default="{{ '%02X' % attr.type.default | int }}"
+{%- if attr.type.type in ['bool']  %} default="{{ attr.type.default | lower}}"
+{%- elif type_name(attr.type) in ['hex8']  %} default="{{ '%02X' % attr.type.default | int }}"
 {%- elif type_name(attr.type) in ['hex16'] %} default="{{ '%04X' % attr.type.default | int }}"
 {%- elif type_name(attr.type) in ['hex32'] %} default="{{ '%08X' % attr.type.default | int }}"
 {%- elif type_name(attr.type) in ['hex64'] %} default="{{ '%016X' % attr.type.default | int }}"
@@ -166,8 +167,9 @@
   </xs:complexType>
 {%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
 </xs:element>
-{%- elif element.type.type in ['object', 'array', 'dict'] -%}
-<xs:element name="{{ element.name }}" type="{{ element.type.name }}"
+{%- elif element.type.type in ['object', 'dict'] -%}
+{#<xs:element name="{{ element.name }}" type="{{ element.type.name }}"#}
+<xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"
 {%- if not required %} minOccurs="0"{% endif -%}
 >
 {%- if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
