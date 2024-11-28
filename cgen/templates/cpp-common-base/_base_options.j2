@@ -17,4 +17,6 @@
     {{- set_opt(opt, "use_print", options["cpp"]["use_print"] | default(opt.use_printer)) }}
     {{- set_opt(opt, "use_validate", options["cpp"]["use_validate"] | default(opt.use_validate)) }}
   {%- endif -%}
+  {%- block specific_options -%}
+  {%- endblock -%}
 {%- endmacro -%}

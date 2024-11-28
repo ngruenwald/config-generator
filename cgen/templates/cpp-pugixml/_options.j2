@@ -1,1 +1,5 @@
 {%- extends "_base_options.j2" -%}
+
+{%- block specific_options -%}
+  {{- set_opt(opt, 'use_element_names', True) -}}
+{%- endblock -%}

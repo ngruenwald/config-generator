@@ -1,9 +1,6 @@
 {%- set opt = {} -%}
 {%- from "_options.j2" import set_options with context -%}
 {{- set_options(opt) -}}
-{%- from "_options.j2" import set_opt with context -%}
-{{- set_opt(opt, 'use_element_names', True) -}}
-{{- set_opt(opt, 'use_validate', options["cpp"]["use_validate"] | default(True)) -}}
 {%- extends "base_config.cpp.j2" -%}
 
 {% block specific_includes %}
