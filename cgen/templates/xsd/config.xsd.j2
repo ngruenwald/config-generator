@@ -9,28 +9,28 @@
   param item_type The type of array/list elements (array/list types only).
   param base_type The base type of enums (enum only).
   param ut        List of unique types.
-#}
+-#}
 {%- macro _type_name(name, type, base, width, max, item_type, base_type, ut) -%}
-{%- if name in ut -%}{{ name }}
-{%- elif type in ['int'] -%}xs:integer
-{%- elif type in ['uint'] -%}
-  {%- if base == 16 -%}
-    {%-   if (width and width == 1) or (max and max <= 0xff) -%}hex8
-    {%- elif (width and width == 2) or (max and max <= 0xffff) -%}hex16
-    {%- elif (width and width == 4) or (max and max <= 0xffffffff) -%}hex32
-    {%- else -%}hex64
+  {%- if name in ut -%}{{ name }}
+  {%- elif type in ['int'] -%}xs:integer
+  {%- elif type in ['uint'] -%}
+    {%- if base == 16 -%}
+      {%-   if (width and width == 1) or (max and max <= 0xff) -%}hex8
+      {%- elif (width and width == 2) or (max and max <= 0xffff) -%}hex16
+      {%- elif (width and width == 4) or (max and max <= 0xffffffff) -%}hex32
+      {%- else -%}hex64
+      {%- endif -%}
+    {%- else -%}xs:unsignedLong
     {%- endif -%}
-  {%- else -%}xs:unsignedLong
+  {%- elif type in ['float'] -%}xs:float
+  {%- elif type in ['double'] -%}xs:double
+  {%- elif type in ['bool'] -%}xs:boolean
+  {%- elif type in ['string'] -%}xs:string
+  {%- elif type in ['array'] -%}{{ type_name(item_type, ut) }}
+  {%- elif type in ['object'] -%}{{ t.name }}
+  {%- elif type in ['enum'] -%}{{ _type_name(name, base_type, base, width, max, item_type, base_type, ut) }}
+  {%- else -%}{{ type }}
   {%- endif -%}
-{%- elif type in ['float'] -%}xs:float
-{%- elif type in ['double'] -%}xs:double
-{%- elif type in ['bool'] -%}xs:boolean
-{%- elif type in ['string'] -%}xs:string
-{%- elif type in ['array'] -%}{{ type_name(item_type, ut) }}
-{%- elif type in ['object'] -%}{{ t.name }}
-{%- elif type in ['enum'] -%}{{ _type_name(name, base_type, base, width, max, item_type, base_type, ut) }}
-{%- else -%}{{ type }}
-{%- endif -%}
 {%- endmacro -%}
 
 {#-
@@ -38,7 +38,7 @@
 
   param t  The type.
   param ut List of unique types.
-#}
+-#}
 {%- macro type_name(t, ut) -%}
 {{ _type_name(t.name, t.type, t.base, t.width, t.max, t.item_type, t.base_type, ut)}}
 {%- endmacro -%}
@@ -47,63 +47,57 @@
   Escape reserved XML characters.
 
   param s The string to escape.
-#}
+-#}
 {%- macro escape_string(s) -%}
 {{ s | replace('&', '&amp;') | replace('<', '&lt;') | replace('>', '&gt;') | replace('\'', '&apos;') }}
 {%- endmacro -%}
 
 {%- macro format_pattern(s) -%}
-{%- if s | length > 0 -%}
-{%- if s[0] == '^' and s[-1] == '$' -%} {{ escape_string(s[1:-1]) }}
-{%- elif s[0] == '^' -%}                {{ escape_string(s[1:]) }}
-{%- elif s[-1] == '$' -%}               {{ escape_string(s[:-1]) }}
-{%- else -%}                            {{ escape_string(s) }}
-{%- endif -%}
-{%- endif -%}
+  {%- if s | length > 0 -%}
+    {%- if s[0] == '^' and s[-1] == '$' -%} {{ escape_string(s[1:-1]) }}
+    {%- elif s[0] == '^' -%}                {{ escape_string(s[1:]) }}
+    {%- elif s[-1] == '$' -%}               {{ escape_string(s[:-1]) }}
+    {%- else -%}                            {{ escape_string(s) }}
+    {%- endif -%}
+  {%- endif -%}
 {%- endmacro -%}
 
 {#-
   Renders a description.
 
   param x    Object containing the description
-  param ind  Indentation
 -#}
-{%- macro insert_description(x, ind) -%}
-{%- if x.description -%}
-{% filter indent(ind) %}
+{%- macro insert_description(x) %}
+  {%- if x.description %}
 <xs:annotation>
   <xs:documentation>
     {{ escape_string(x.description) }}
   </xs:documentation>
 </xs:annotation>
-{% endfilter -%}
-{%- endif -%}
-{%- endmacro -%}
+  {%- endif %}
+{%- endmacro %}
 
-{#
+{#-
   Renders contstraints.
 
   param x    Object containing the constraints
-  param ind  Indentation
-#}
-{%- macro insert_constraints(x, ind) -%}
-{%- if x.type.constraints | default([]) | length > 0 -%}
-{%- filter indent(ind) %}
-{%- for constraint in x.type.constraints %}
-{%- if constraint.type == 'unique' %}
+-#}
+{%- macro insert_constraints(x) -%}
+  {%- if x.type.constraints | default([]) | length > 0 %}
+    {%- for constraint in x.type.constraints %}
+      {%- if constraint.type == 'unique' %}
 <xs:unique name="{{ constraint.id }}">
   <xs:selector xpath="{{ '/'.join(constraint.field.split('/')[0:-1]) }}" />
   <xs:field xpath="@{{ constraint.field.split('/')[-1] }}" />
 </xs:unique>
-{%- elif constraint.type == 'keyref' -%}
+      {%- elif constraint.type == 'keyref' %}
 <xs:keyref name="{{ constraint.id }}" refer="{{ constraint.refer }}">
   <xs:selector xpath="{{ '/'.join(constraint.field.split('/')[0:-1]) }}" />
   <xs:field xpath="@{{ constraint.field.split('/')[-1] }}" />
 </xs:keyref>
-{%- endif -%}
-{%- endfor %}
-{%- endfilter -%}
-{%- endif -%}
+      {%- endif %}
+    {%- endfor %}
+  {%- endif %}
 {%- endmacro -%}
 
 {#-
@@ -114,87 +108,78 @@
 -#}
 {%- macro insert_attribute(attr, required) -%}
 <xs:attribute name="{{ attr.name }}"
-{%- if not (attr.type.name not in unique_types and (attr.type.min or attr.type.max or attr.type.pattern)) %} type="{{ type_name(attr.type, unique_types) }}"{% endif -%}
-{%- if required %} use="required"{% else %} use="optional"{% endif -%}
-{%- if not required and attr.type.default is not none -%}
-{%- if attr.type.type in ['bool']  %} default="{{ attr.type.default | lower}}"
-{%- elif type_name(attr.type) in ['hex8']  %} default="{{ '%02X' % attr.type.default | int }}"
-{%- elif type_name(attr.type) in ['hex16'] %} default="{{ '%04X' % attr.type.default | int }}"
-{%- elif type_name(attr.type) in ['hex32'] %} default="{{ '%08X' % attr.type.default | int }}"
-{%- elif type_name(attr.type) in ['hex64'] %} default="{{ '%016X' % attr.type.default | int }}"
-{%- else %} default="{{ escape_string(attr.type.default) }}"{% endif -%}
-{%- endif -%}
->{{ insert_description(attr, 0) }}
-{%- if attr.type.name not in unique_types and (attr.type.min or attr.type.max or attr.type.pattern) %}
-  <xs:simpleType>
-    <xs:restriction base="{{ type_name(attr.type) }}">
-      {%- if attr.type.type in ['string'] %}
-      {% if attr.type.pattern is not none %}<xs:pattern value="{{ format_pattern(attr.type.pattern) }}" />{% endif -%}
-      {% if attr.type.min is not none %}<xs:minLength value="{{ attr.type.min }}" />{% endif -%}
-      {% if attr.type.max is not none %}<xs:maxLength value="{{ attr.type.max }}" />{% endif -%}
-      {%- elif type_name(attr.type) not in ['hex8', 'hex16', 'hex32', 'hex64'] %} {# can't use restriction on HexBinary #}
-      {% if attr.type.min is not none %}<xs:minInclusive value="{{ attr.type.min }}" />{% endif -%}
-      {% if attr.type.max is not none %}<xs:maxInclusive value="{{ attr.type.max }}" />{% endif -%}
-      {%- endif %}
-    </xs:restriction>
-  </xs:simpleType>
-{% endif -%}
+  {%- if not (attr.type.name not in unique_types and (attr.type.min or attr.type.max or attr.type.pattern)) %} type="{{ type_name(attr.type, unique_types) }}"{% endif -%}
+  {%- if required %} use="required"{% else %} use="optional"{% endif -%}
+  {%- if not required and attr.type.default is not none -%}
+  {%- if attr.type.type in ['bool']  %} default="{{ attr.type.default | lower}}"
+  {%- elif type_name(attr.type) in ['hex8']  %} default="{{ '%02X' % attr.type.default | int }}"
+  {%- elif type_name(attr.type) in ['hex16'] %} default="{{ '%04X' % attr.type.default | int }}"
+  {%- elif type_name(attr.type) in ['hex32'] %} default="{{ '%08X' % attr.type.default | int }}"
+  {%- elif type_name(attr.type) in ['hex64'] %} default="{{ '%016X' % attr.type.default | int }}"
+  {%- else %} default="{{ escape_string(attr.type.default) }}"{% endif -%}
+  {%- endif -%}
+>
+  {%- filter indent(2) %}
+{{- insert_description(attr) -}}
+    {%- if attr.type.name not in unique_types and (attr.type.min or attr.type.max or attr.type.pattern) %}
+<xs:simpleType>
+  <xs:restriction base="{{ type_name(attr.type) }}">
+    {% if attr.type.type in ['string'] %}
+      {%- if attr.type.pattern is not none %}<xs:pattern value="{{ format_pattern(attr.type.pattern) }}" />{% endif %}
+      {%- if attr.type.min is not none %}<xs:minLength value="{{ attr.type.min }}" />{% endif %}
+      {%- if attr.type.max is not none %}<xs:maxLength value="{{ attr.type.max }}" />{% endif %}
+    {%- elif type_name(attr.type) not in ['hex8', 'hex16', 'hex32', 'hex64'] %} {# can't use restriction on HexBinary #}
+      {%- if attr.type.min is not none %}<xs:minInclusive value="{{ attr.type.min }}" />{% endif %}
+      {%- if attr.type.max is not none %}<xs:maxInclusive value="{{ attr.type.max }}" />{% endif %}
+    {%- endif %}
+  </xs:restriction>
+</xs:simpleType>
+    {%- endif %}
+  {%- endfilter %}
 </xs:attribute>
-{% endmacro -%}
-
-{#-
-  Renders an element.
-
-  param elem      An object to be represented as an (xml) element.
-  param required  Indicates if this is a required element.
--#}
-{%- macro insert_element(elem, required) -%}
-<xs:element name="{{ elem.name }}" type="{{ type_name(elem.type) }}"{% if not required %} minOccurs="0"{% endif %}>
-{%- if elem.description %}{{ insert_description(elem, 2) }}{% endif -%}
-</xs:element>
 {%- endmacro -%}
 
 
 {#- renders an element -#}
-{%- macro insert_element2(element, required) -%}
-{%- if element.type in ['object'] -%}
-<xs:element name="{{ element.name }}"
-{%- filter indent(2) -%}
-{%- if not required %} minOccurs="0"{% endif -%}
->
-{% if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
+{%- macro insert_element(element, required) -%}
+  {%- if element.type in ['object'] -%}
+<xs:element name="{{ element.name }}"{% if not required %} minOccurs="0"{% endif %}>
+    {%- filter indent(2) %}
+{{ insert_description(element.description) }}
 <xs:complexType>
-{%- filter indent(2) -%}
+      {%- filter indent(2) -%}
 {{ insert_complexTypeInner(element) }}
-{%- endfilter %}
+      {%- endfilter -%}
 </xs:complexType>
-{%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
-{%- endfilter %}
+{{ insert_constraints(element) }}
+    {%- endfilter %}
 </xs:element>
-{%- elif element.type.type in ['object', 'dict'] -%}
-{#<xs:element name="{{ element.name }}" type="{{ element.type.name }}"#}
-<xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"
-{%- if not required %} minOccurs="0"{% endif -%}
->
-{%- if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
-{%- if true -%}{{ insert_constraints(element, 2) }}{%- endif %}
+  {%- elif element.type.type in ['object', 'dict'] -%}
+{#-<xs:element name="{{ element.name }}" type="{{ element.type.name }}"-#}
+<xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"{% if not required %} minOccurs="0"{% endif %}>
+    {%- filter indent(2) %}
+{{- insert_description(element) }}
+{{- insert_constraints(element) }}
+    {%- endfilter %}
 </xs:element>
-{%- elif element.type.type in ['array'] %}
+  {%- elif element.type.type in ['array'] -%}
 <xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"
 {%- if element.type.minsize is not none %} minOccurs="{{ element.type.minsize }}"{% else %} minOccurs="0"{% endif -%}
 {%- if element.type.maxsize is not none %} maxOccurs="{{ element.type.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
 >
-{%- if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
-{%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
+    {%- filter indent(2) %}
+{{- insert_description(element) }}
+{{- insert_constraints(element) }}
+    {%- endfilter %}
 </xs:element>
-{%- else -%}
-<xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"
-{%- if not required %} minOccurs="0"{% endif -%}
->
-{%- if element.description %}{{ insert_description(element.description, 2) }}{% endif -%}
-{%- if true -%}{{ insert_constraints(element, 2) }}{%- endif -%}
+  {%- else %}
+<xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"{% if not required %} minOccurs="0"{% endif %}>
+    {%- filter indent(2) %}
+{{- insert_description(element) }}
+{{- insert_constraints(element) }}
+    {%- endfilter %}
 </xs:element>
-{%- endif -%}
+  {%- endif %}
 {%- endmacro -%}
 
 
@@ -205,15 +190,12 @@
 -#}
 {%- macro insert_complexType(t) -%}
 <xs:complexType name="{{ t.name }}">
-{%- filter indent(2) -%}
-{%- if t.description -%}
-{{ insert_description(t.description, 0) }}
-{%- endif -%}
-{{ insert_complexTypeInner(t) }}
-{%- endfilter -%}
+  {%- filter indent(2) -%}
+{{- insert_description(t) -}}
+{{- insert_complexTypeInner(t) -}}
+  {%- endfilter -%}
 </xs:complexType>
 {%- endmacro -%}
-
 
 {#-
   Renders the inner part of a complex type.
@@ -221,44 +203,57 @@
   param t  The type.
 -#}
 {%- macro insert_complexTypeInner(t) -%}
-{%- if t.type in ['array'] %}
+  {%- if t.type in ['array'] -%}
+{{ insert_complexTypeInnerArray(t) }}
+  {%- elif t.type in ['object'] -%}
+{{ insert_complexTypeInnerObject(t) }}
+  {%- elif t.type in ['dict'] -%}
+{{ insert_complexTypeInnerDict(t) }}
+  {%- else -%}
+<!-- unknown type "{{ t }}" -->
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro insert_complexTypeInnerArray(t) -%}
 <xs:sequence>
   <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" type="{{ type_name(t.item_type, unique_types) }}"
-  {%- if t.minsize is not none %} minOccurs="{{ t.minsize }}"{% else %} minOccurs="0"{% endif -%}
-  {%- if t.maxsize is not none %} maxOccurs="{{ t.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
+    {%- if t.minsize is not none %} minOccurs="{{ t.minsize }}"{% else %} minOccurs="0"{% endif -%}
+    {%- if t.maxsize is not none %} maxOccurs="{{ t.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
   />
 </xs:sequence>
-{%- elif t.type in ['object'] %}
-{#- determine number of elements in object -#}
-{%- set tmp = {'num_elements': 0} -%}
-{%- for f in t.fields -%}
-{%- if f.type.type in ['object', 'array', 'dict'] -%}
-{%- if tmp.update({'num_elements': tmp['num_elements'] + 1}) %}{% endif -%}
-{%- endif -%}
-{%- endfor -%}
-{%- if tmp['num_elements'] > 0 -%}
-  {%- if t['xml']['type'] | default('sequence') == 'choice' %}
+{%- endmacro -%}
+
+{%- macro insert_complexTypeInnerObject(t) -%}
+  {#- determine number of elements in object -#}
+  {%- set tmp = {'num_elements': 0} -%}
+  {%- for f in t.fields -%}
+    {%- if f.type.type in ['object', 'array', 'dict'] -%}
+      {%- if tmp.update({'num_elements': tmp['num_elements'] + 1}) %}{% endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if tmp['num_elements'] > 0 %}
+    {%- if t['xml']['type'] | default('sequence') == 'choice' %}
 <xs:choice minOccurs="{{ t['xml']['min'] | default(1) }}" maxOccurs="{{ t['xml']['max'] | default(1) }}">
-  {%- else %}
+    {%- else %}
 <xs:{{ t['xml']['type'] | default('sequence') }}>
-  {%- endif -%}
-  {%- filter indent(2) -%}
-  {%- for f in t.fields -%}
-  {%- if f.type.type in ['object', 'array', 'dict'] -%}
-{{ insert_element2(f, f.required) }}
-  {%- endif %}
-  {%- endfor -%}
-  {%- endfilter %}
+    {%- endif %}
+    {%- filter indent(2) %}
+      {%- for f in t.fields %}
+        {%- if f.type.type in ['object', 'array', 'dict'] %}
+{{ insert_element(f, f.required) }}
+        {%- endif %}
+      {%- endfor %}
+    {%- endfilter %}
 </xs:{{ t['xml']['type'] | default('sequence') }}>
-{% endif %}
-  {% filter indent(2) %}
-  {%- for f in t.fields -%}
-  {%- if not f.type.type in ['object', 'array', 'dict'] -%}
-{{ insert_attribute(f, f.required) }}
   {%- endif %}
-  {%- endfor -%}
-  {%- endfilter %}
-{%- elif t.type in ['dict'] %}
+  {%- for f in t.fields %}
+    {%- if not f.type.type in ['object', 'array', 'dict'] %}
+{{ insert_attribute(f, f.required) }}
+    {%- endif %}
+  {%- endfor %}
+{% endmacro -%}
+
+{%- macro insert_complexTypeInnerDict(t) -%}
 <xs:sequence>
   <xs:element name="{{ t.item_name if t.item_name else 'entry' }}" minOccurs="0" maxOccurs="unbounded">
     <xs:complexType>
@@ -269,11 +264,35 @@
     </xs:complexType>
   </xs:element>
 </xs:sequence>
-{%- else -%}
-    <!-- unknown type "{{ t }}" -->
-{%- endif %}
-{%- endmacro %}
+{%- endmacro -%}
 
+
+{#-
+-#}
+{%- macro insert_restriction(t) -%}
+<xs:restriction base="{{ type_name(t, []) }}">
+  {%- if t.type in ['int', 'uint'] %}
+    {%- if t.base != 16 %}
+      {%- if t.min is not none %}<xs:minInclusive value="{{ t.min }}" />{% endif %}
+      {%- if t.max is not none %}<xs:maxInclusive value="{{ t.max }}" />{% endif %}
+    {%- endif %}
+  {%- elif t.type in ['float', 'double'] %}
+    {%- if t.min is not none %}<xs:minInclusive value="{{ t.min }}" />{% endif %}
+    {%- if t.max is not none %}<xs:maxInclusive value="{{ t.max }}" />{% endif %}
+  {%- elif t.type in ['bool'] %}
+  {%- elif t.type in ['string'] %}
+    {%- if t.min is not none %}<xs:minLength value="{{ t.min }}" />{% endif %}
+    {%- if t.max is not none %}<xs:maxLength value="{{ t.max }}" />{% endif %}
+    {%- if t.pattern is not none %}<xs:pattern value="{{ escape_string(t.pattern) }}" />{% endif %}
+  {%- elif t.type in ['enum'] %}
+    {%- for e in t.enum %}
+  <xs:enumeration value="{{ e }}" />
+    {%- endfor -%}
+  {%- else %}
+<!-- unknown type "{{ t.type }}" -->
+  {%- endif %}
+</xs:restriction>
+{%- endmacro -%}
 
 {#-
   Renders a simple type.
@@ -282,32 +301,10 @@
 -#}
 {%- macro insert_simpleType(t) -%}
 <xs:simpleType name="{{ t.name }}">
-{%- if t.description %}{{ insert_description(t.description, 2) }}{% endif %}
-  <xs:restriction base="{{ type_name(t, []) }}">
-{%- if t.type in ['int', 'uint'] %}
-{%- if t.base != 16 %}
-  {% if t.min is not none %}    <xs:minInclusive value="{{ t.min }}" />{% endif %}
-  {% if t.max is not none %}    <xs:maxInclusive value="{{ t.max }}" />{% endif %}
-{%- endif %}
-{%- elif t.type in ['float', 'double'] -%}
-  {% if t.min is not none %}    <xs:minInclusive value="{{ t.min }}" />{% endif %}
-  {% if t.max is not none %}    <xs:maxInclusive value="{{ t.max }}" />{% endif %}
-{%- elif t.type in ['bool'] -%}
-{%- elif t.type in ['string'] -%}
-  {% if t.min is not none %}
-    <xs:minLength value="{{ t.min }}" />{% endif %}
-  {% if t.max is not none %}
-    <xs:maxLength value="{{ t.max }}" />{% endif %}
-  {% if t.pattern is not none %}
-    <xs:pattern value="{{ escape_string(t.pattern) }}" />{% endif %}
-{%- elif t.type in ['enum'] %}
-  {%- for e in t.enum %}
-    <xs:enumeration value="{{ e }}" />
-  {%- endfor %}
-{%- else -%}
-    <!-- unknown type "{{ t.type }}" -->
-{%- endif %}
-  </xs:restriction>
+  {%- filter indent(2) -%}
+{{- insert_description(t) }}
+{{ insert_restriction(t) -}}
+  {%- endfilter %}
 </xs:simpleType>
 {%- endmacro -%}
 
@@ -318,11 +315,11 @@
   param t  The type.
 -#}
 {%- macro insert_type(t) -%}
-{%- if t.type in ['object', 'array', 'dict'] -%}
+  {%- if t.type in ['object', 'array', 'dict'] -%}
 {{ insert_complexType(t) }}
-{%- else -%}
+  {%- else -%}
 {{ insert_simpleType(t) }}
-{%- endif -%}
+  {%- endif -%}
 {%- endmacro -%}
 
 {#- Content -#}
@@ -332,17 +329,18 @@
 {% filter indent(2) %}
 <!-- This file has been generated. Do not modify. -->
 
-{{ insert_element2(config, True) }}
-{% for e in elements -%}
-{% if e.name in unique_elements %}
+{{ insert_element(config, True) }}
+  {% for e in elements %}
+    {%- if e.name in unique_elements %}
+
 {{ insert_type(e) }}
-{% endif %}
-{%- endfor -%}
-{%- for t in types -%}
-{% if t.name in unique_types %}
+    {% endif %}
+  {%- endfor %}
+  {%- for t in types %}
+    {%- if t.name in unique_types %}
 {{ insert_type(t) }}
-{% endif %}
-{%- endfor -%}
+    {% endif %}
+  {%- endfor %}
 {%- endfilter %}
 
   <xs:simpleType name="hex8">
