@@ -5,7 +5,7 @@ import os
 import shutil
 import yaml
 
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError
+from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError, ChainableUndefined
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -269,7 +269,7 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
             pass
 
         file_loader = FileSystemLoader(template_paths)  # [template_path, Path(template_path).parent])
-        env = Environment(loader=file_loader)
+        env = Environment(loader=file_loader, undefined=ChainableUndefined)
 
         env.filters['camel_case'] = j2_camel_case
         env.filters['pascal_case'] = j2_pascal_case
