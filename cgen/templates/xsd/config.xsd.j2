@@ -68,7 +68,7 @@
   param x    Object containing the description
 -#}
 {%- macro insert_description(x) %}
-  {%- if x.description and options['xsd']['generate_descriptions'] | default(True) %}
+  {%- if x.description and options['xsd']['generate_descriptions'] | default(False) %}
 <xs:annotation>
   <xs:documentation>
     {{ escape_string(x.description) }}
