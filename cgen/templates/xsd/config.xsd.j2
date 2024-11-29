@@ -191,9 +191,9 @@
 {%- macro insert_complexType(t) -%}
 <xs:complexType name="{{ t.name }}">
   {%- filter indent(2) -%}
-{{- insert_description(t) -}}
-{{- insert_complexTypeInner(t) -}}
-  {%- endfilter -%}
+{{- insert_description(t) }}
+{{ insert_complexTypeInner(t) -}}
+  {%- endfilter %}
 </xs:complexType>
 {%- endmacro -%}
 
