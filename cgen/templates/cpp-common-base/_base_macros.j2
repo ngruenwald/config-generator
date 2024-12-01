@@ -141,11 +141,25 @@ _
 {{ n }}
 {%- endmacro -%}
 
-{%- macro insert_opts(field) -%}
+{%- macro insert_fn_opts() -%}
+{%- if opt.requires_opts -%}
+,
+    [[maybe_unused]] config_options opts
+{%- endif -%}
+{%- endmacro -%}
 
+{%- macro insert_fd_opts() -%}
+{%- if opt.requires_opts -%}
+, opts
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro insert_opts(field) -%}
+{%- if opt.requires_opts -%}
 {%- if field.type.type in ['array'] -%}
-{"{{ field.type.item_name | default('entry') }}"}
+, {"{{ field.type.item_name | default('entry') }}"}
 {%- else -%}
-{}
+, {}
+{%- endif -%}
 {%- endif -%}
 {%- endmacro -%}

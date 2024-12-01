@@ -35,16 +35,16 @@ inline void validate(
 {% endif %}
 inline bool contains_key(
     const config_data_t& data,
-    const char* key,
-    [[maybe_unused]] config_options opts)
+    const char* key
+    {{- m.insert_fn_opts() -}})
 {
     return data.contains(key);
 }
 
 inline const config_data_t& get_key(
     const config_data_t& data,
-    const char* key,
-    [[maybe_unused]] config_options opts)
+    const char* key
+    {{- m.insert_fn_opts() -}})
 {
     return data[key];
 }
@@ -52,8 +52,8 @@ inline const config_data_t& get_key(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    T& value,
-    [[maybe_unused]] config_options opts)
+    T& value
+    {{- m.insert_fn_opts() -}})
 {
     data.get_to(value);
 }
@@ -61,8 +61,8 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const T& data,
-    T& value,
-    [[maybe_unused]] config_options opts)
+    T& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data;
 }
@@ -70,12 +70,12 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    std::vector<T>& value,
-    [[maybe_unused]] config_options opts)
+    std::vector<T>& value
+    {{- m.insert_fn_opts() -}})
 {
     for (const auto& child : data)
     {
-        T tmp; from_data(child, tmp, opts);
+        T tmp; from_data(child, tmp {{- m.insert_fd_opts() -}});
         value.push_back(tmp);
     }
 }
@@ -83,12 +83,12 @@ inline void from_data(
 template<typename K, typename V>
 inline void from_data(
     const config_data_t& data,
-    std::map<K,V>& value,
-    [[maybe_unused]] config_options opts)
+    std::map<K,V>& value
+    {{- m.insert_fn_opts() -}})
 {
     for (const auto& [key, val] : data.items())
     {
-        V v; from_data(val, v, opts);
+        V v; from_data(val, v {{- m.insert_fd_opts() -}});
         value[config::from_string<K>(key)] = v;
     }
 }

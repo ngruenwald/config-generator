@@ -1,4 +1,5 @@
-{%- import "_base_macros.j2" as m -%}
+{%- block options %}{% endblock -%}
+{%- import "_base_macros.j2" as m with context -%}
 
 {#-
   Renders a list of load functions
@@ -16,14 +17,14 @@
 {%- macro load_function(type) -%}
 static void from_data(
     const config_data_t& data,
-    {{ m.type_case(type.name) }}& value,
-    [[maybe_unused]] config_options opts)
+    {{ m.type_case(type.name) }}& value
+    {{- m.insert_fn_opts() -}})
 {
 {%- for field in type.fields %}
 {%- if field.required %}
-    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_opts(field) -}});
 {%- else %}
-    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_opts(field) -}});
 {%- endif %}
 {%- endfor %}
 }
@@ -39,8 +40,8 @@ static void from_data(
 {%- if type.type == "enum" and type.base_type == "string" and type.name in unique_types %}
 static void from_data(
     const config_data_t& data,
-    {{ m.type_case(type.name) }}& value,
-    [[maybe_unused]] config_options opts)
+    {{ m.type_case(type.name) }}& value
+    {{- m.insert_fn_opts() -}})
 {
     enum_from_data(data, value);
 }
@@ -111,7 +112,7 @@ namespace {{ namespace }} {
 {%- endfor %}
 
 #include "from_string.hpp"
-
+{% if opt.requires_opts %}
 //
 // options
 //
@@ -126,7 +127,7 @@ struct config_options
     config_options(const char* en) : elementName{en} {}
     config_options(unsigned long f, const char* en) : flags{f}, elementName{en} {}
 };
-
+{% endif %}
 //
 // specific
 //
@@ -140,22 +141,22 @@ template<typename T>
 inline void get_mandatory_element(
     const config_data_t& data,
     const char* name,
-    T& value,
-    config_options opts)
+    T& value
+    {{- m.insert_fn_opts() -}})
 {
-    from_data(get_key(data, name, opts), value, opts);
+    from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
 }
 
 template<typename T>
 inline void get_optional_element(
     const config_data_t& data,
     const char* name,
-    T& value,
-    config_options opts)
+    T& value
+    {{- m.insert_fn_opts() -}})
 {
-    if (contains_key(data, name, opts))
+    if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
-        from_data(get_key(data, name, opts), value, opts);
+        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
     }
 }
 {% if opt.use_optional %}
@@ -163,13 +164,13 @@ template<typename T>
 inline void get_optional_element(
     const config_data_t& data,
     const char* name,
-    std::optional<T>& value,
-    config_options opts)
+    std::optional<T>& value
+    {{- m.insert_fn_opts() -}})
 {
-    if (contains_key(data, name, opts))
+    if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
         T tmp;
-        from_data(get_key(data, name, opts), tmp, opts);
+        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), tmp {{- m.insert_fd_opts() -}});
         value = tmp;
     }
 }
@@ -178,12 +179,12 @@ template<typename T>
 inline void get_optional_element(
     const config_data_t& data,
     const char* name,
-    std::vector<T>& value,
-    config_options opts)
+    std::vector<T>& value
+    {{- m.insert_fn_opts() -}})
 {
-    if (contains_key(data, name, opts))
+    if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
-        from_data(get_key(data, name, opts), value, opts);
+        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
     }
 }
 
@@ -191,12 +192,12 @@ template<typename K, typename V>
 inline void get_optional_element(
     const config_data_t& data,
     const char* name,
-    std::map<K,V>& value,
-    config_options opts)
+    std::map<K,V>& value
+    {{- m.insert_fn_opts() -}})
 {
-    if (contains_key(data, name, opts))
+    if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
-        from_data(get_key(data, name, opts), value, opts);
+        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
     }
 }
 
@@ -206,7 +207,7 @@ inline void enum_from_data(
     T& value)
 {
     std::string tmp;
-    from_data(data, tmp, {});
+    from_data(data, tmp {%- if opt.requires_opts %}, {}{% endif -%});
     if (!from_string(tmp.c_str(), value))
     {
         throw std::invalid_argument("invalid enum value");
@@ -388,14 +389,14 @@ std::ostream& operator<<(
 
 static void from_data(
     const config_data_t& data,
-    {{ m.type_case(config.name) }}& value,
-    [[maybe_unused]] config_options opts)
+    {{ m.type_case(config.name) }}& value
+    {{- m.insert_fn_opts() -}})
 {
 {%- for field in config.fields %}
 {%- if field.required %}
-    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_opts(field) -}});
 {%- else %}
-    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }}, {{ m.insert_opts(field) }});
+    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_opts(field) -}});
 {%- endif %}
 {%- endfor %}
 }
@@ -411,7 +412,7 @@ struct std::unique_ptr<{{ m.type_case(config.name) }}> LoadConfig(
         validate(data);
         {% endif %}
         auto config = std::make_unique<struct {{ m.type_case(config.name) }}>();
-        from_data(data, *config, {});
+        from_data(data, *config {%- if opt.requires_opts %}, {}{% endif %});
 
         return config;
     }

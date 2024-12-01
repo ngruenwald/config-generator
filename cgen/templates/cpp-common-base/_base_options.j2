@@ -9,6 +9,7 @@
   {{- set_opt(opt, "use_optional", False) }}
   {{- set_opt(opt, "use_printer", True) }}
   {{- set_opt(opt, "use_validate", False ) }}
+  {{- set_opt(opt, "requires_opts", False) }}
   {#- Config -#}
   {{- set_opt(opt, "output_prefix", options["output_prefix"] | default(opt.output_prefix)) }}
   {%- if options["cpp"] -%}

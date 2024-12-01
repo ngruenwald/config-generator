@@ -27,16 +27,16 @@ inline void validate(
 {% endif %}
 inline bool contains_key(
     const config_data_t& data,
-    const char* key,
-    [[maybe_unused]] config_options opts)
+    const char* key
+    {{- m.insert_fn_opts() -}})
 {
     return data.contains(key);
 }
 
 inline const config_data_t& get_key(
     const config_data_t& data,
-    const char* key,
-    [[maybe_unused]] config_options opts)
+    const char* key
+    {{- m.insert_fn_opts() -}})
 {
     return data.at(key);
 }
@@ -44,56 +44,56 @@ inline const config_data_t& get_key(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    T& value,
-    [[maybe_unused]] config_options opts)
+    T& value
+    {{- m.insert_fn_opts() -}})
 {
     assert(false);
 }
 
 inline void from_data(
     const config_data_t& data,
-    bool& value,
-    [[maybe_unused]] config_options opts)
+    bool& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data.as_boolean();
 }
 
 inline void from_data(
     const config_data_t& data,
-    int& value,
-    [[maybe_unused]] config_options opts)
+    int& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data.as_integer();
 }
 
 inline void from_data(
     const config_data_t& data,
-    unsigned int& value,
-    [[maybe_unused]] config_options opts)
+    unsigned int& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data.as_integer();
 }
 
 inline void from_data(
     const config_data_t& data,
-    double& value,
-    [[maybe_unused]] config_options opts)
+    double& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data.as_floating();
 }
 
 inline void from_data(
     const config_data_t& data,
-    float& value,
-    [[maybe_unused]] config_options opts)
+    float& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data.as_floating();
 }
 
 inline void from_data(
     const config_data_t& data,
-    std::string& value,
-    [[maybe_unused]] config_options opts)
+    std::string& value
+    {{- m.insert_fn_opts() -}})
 {
     value = data.as_string();
 }
@@ -101,13 +101,13 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    std::vector<T>& value,
-    config_options opts)
+    std::vector<T>& value
+    {{- m.insert_fn_opts() -}})
 {
     for (const auto& child : data.as_array())
     {
         T tmp;
-        from_data(child, tmp, opts);
+        from_data(child, tmp {{- m.insert_fd_opts() -}});
         value.push_back(tmp);
     }
 }
@@ -115,14 +115,14 @@ inline void from_data(
 template<typename K, typename V>
 inline void from_data(
     const config_data_t& data,
-    std::map<K,V>& value,
-    config_options opts)
+    std::map<K,V>& value
+    {{- m.insert_fn_opts() -}})
 {
     for (const auto& child : data.as_table())
     {
         auto key = config::from_string<K>(child.first);
         V val;
-        from_data(child.second, val, opts);
+        from_data(child.second, val {{- m.insert_fd_opts() -}});
         value.insert(std::make_pair(key, val));
     }
 }
