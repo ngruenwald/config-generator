@@ -35,16 +35,14 @@ inline void validate(
 {% endif %}
 inline bool contains_key(
     const config_data_t& data,
-    const char* key
-    {{- m.insert_fn_opts() -}})
+    const char* key)
 {
     return data.contains(key);
 }
 
 inline const config_data_t& get_key(
     const config_data_t& data,
-    const char* key
-    {{- m.insert_fn_opts() -}})
+    const char* key)
 {
     return data[key];
 }
@@ -52,8 +50,7 @@ inline const config_data_t& get_key(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    T& value
-    {{- m.insert_fn_opts() -}})
+    T& value)
 {
     data.get_to(value);
 }
@@ -61,8 +58,7 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const T& data,
-    T& value
-    {{- m.insert_fn_opts() -}})
+    T& value)
 {
     value = data;
 }
@@ -70,12 +66,11 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    std::vector<T>& value
-    {{- m.insert_fn_opts() -}})
+    std::vector<T>& value)
 {
     for (const auto& child : data)
     {
-        T tmp; from_data(child, tmp {{- m.insert_fd_opts() -}});
+        T tmp; from_data(child, tmp);
         value.push_back(tmp);
     }
 }
@@ -83,12 +78,11 @@ inline void from_data(
 template<typename K, typename V>
 inline void from_data(
     const config_data_t& data,
-    std::map<K,V>& value
-    {{- m.insert_fn_opts() -}})
+    std::map<K,V>& value)
 {
     for (const auto& [key, val] : data.items())
     {
-        V v; from_data(val, v {{- m.insert_fd_opts() -}});
+        V v; from_data(val, v);
         value[config::from_string<K>(key)] = v;
     }
 }

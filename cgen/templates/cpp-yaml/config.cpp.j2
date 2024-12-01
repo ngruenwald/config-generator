@@ -27,8 +27,7 @@ inline void validate(
 {% endif %}
 inline bool contains_key(
     const config_data_t& data,
-    const char* key
-    {{- m.insert_fn_opts() -}})
+    const char* key)
 {
     try
     {
@@ -46,8 +45,7 @@ inline bool contains_key(
 
 inline config_data_t get_key(
     const config_data_t& data,
-    const char* key
-    {{- m.insert_fn_opts() -}})
+    const char* key)
 {
     return data[key];
 }
@@ -55,8 +53,7 @@ inline config_data_t get_key(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    T& value
-    {{- m.insert_fn_opts() -}})
+    T& value)
 {
     value = data.as<T>();
 }
@@ -64,8 +61,7 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const T& data,
-    T& value
-    {{- m.insert_fn_opts() -}})
+    T& value)
 {
     value = data;
 }
@@ -73,15 +69,14 @@ inline void from_data(
 template<typename T>
 inline void from_data(
     const config_data_t& data,
-    std::vector<T>& value
-    {{- m.insert_fn_opts() -}})
+    std::vector<T>& value)
 {
     if (data.Type() == YAML::NodeType::Sequence)
     {
         for (std::size_t n = 0; n < data.size(); n++)
         {
             T tmp;
-            from_data(data[n], tmp {{- m.insert_fd_opts() -}});
+            from_data(data[n], tmp);
             value.push_back(tmp);
         }
     }
@@ -90,17 +85,16 @@ inline void from_data(
 template<typename K, typename V>
 inline void from_data(
     const config_data_t& data,
-    std::map<K,V>& value
-    {{- m.insert_fn_opts() -}})
+    std::map<K,V>& value)
 {
     if (data.Type() == YAML::NodeType::Map)
     {
         for (YAML::const_iterator it = data.begin(); it != data.end(); ++it)
         {
             K key;
-            from_data(it->first, key {{- m.insert_fd_opts() -}});
+            from_data(it->first, key);
             V val;
-            from_data(it->second, val {{- m.insert_fd_opts() -}});
+            from_data(it->second, val);
             value.insert(std::make_pair(key, val));
         }
     }
