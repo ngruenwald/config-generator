@@ -33,6 +33,17 @@ static void get_schema_data(
 {% endblock %}
 
 {% block specific_code %}
+struct config_options
+{
+    unsigned long flags{0};
+    const char* elementName{"entry"};
+
+    config_options() = default;
+    config_options(unsigned long f) : flags{f} {}
+    config_options(const char* en) : elementName{en} {}
+    config_options(unsigned long f, const char* en) : flags{f}, elementName{en} {}
+};
+
 constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
 constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
 

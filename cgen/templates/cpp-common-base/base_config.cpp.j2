@@ -112,22 +112,7 @@ namespace {{ namespace }} {
 {%- endfor %}
 
 #include "from_string.hpp"
-{% if opt.requires_opts %}
-//
-// options
-//
 
-struct config_options
-{
-    unsigned long flags{0};
-    const char* elementName{"entry"};
-
-    config_options() = default;
-    config_options(unsigned long f) : flags{f} {}
-    config_options(const char* en) : elementName{en} {}
-    config_options(unsigned long f, const char* en) : flags{f}, elementName{en} {}
-};
-{% endif %}
 //
 // specific
 //
