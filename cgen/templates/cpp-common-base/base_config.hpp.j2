@@ -167,13 +167,13 @@ struct {{ m.type_case(type.name) }}
 
 {#-
 -#}
-{%- macro _format_default_value(mt_type, mt_base_type, mt_default, mt_base) -%}
+{%- macro _format_default_value(mt_name, mt_type, mt_base_type, mt_default, mt_base) -%}
 {%-   if mt_type in ["string"] -%}"{{ mt_default }}"
 {%- elif mt_type in ["char", "character"] -%}'{{ mt_default }}'
 {%- elif mt_type in ["bool"] -%}{{ "true" if mt_default else "false" }}
 {%- elif mt_type in ["int", "uint"] -%}{{ mt_default | base(mt_base) }}
 {%- elif mt_type in ["enum"] -%}
-  {%- if mt_base_type in ["string"] -%}{{ m.type_name(mt.name) }}::{{ m.enum_case(mt_default) }}
+  {%- if mt_base_type in ["string"] -%}{{ m.type_name(mt_name) }}::{{ m.enum_case(mt_default) }}
   {%- elif mt_base_type in ["int", "uint"] -%}{{ mt_default | base(mt_base) }}
   {%- else -%}{{ mt_default }}
   {%- endif -%}
@@ -189,12 +189,12 @@ struct {{ m.type_case(type.name) }}
 {%-   if mt.type in ["array"] -%}
   {%- for entry in mt.default -%}
     {#- TODO... "complex" types? -#}
-    {{ _format_default_value(m.get_type(mt.item_type), "", entry, "") }}{% if not loop.last %}, {% endif %}
+    {{ _format_default_value(mt.name, m.get_type(mt.item_type), "", entry, "") }}{% if not loop.last %}, {% endif %}
   {%- endfor %}
 {%- elif mt.type in ["dict"] -%}
   {#- TODO -#}
 {%- else -%}
-  {{ _format_default_value(mt.type, mt.base_type, mt.default, mt.base) }}
+  {{ _format_default_value(mt.name, mt.type, mt.base_type, mt.default, mt.base) }}
 {%- endif -%}
 {%- endmacro -%}
 
