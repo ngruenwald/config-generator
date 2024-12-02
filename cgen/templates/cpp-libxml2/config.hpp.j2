@@ -1,0 +1,4 @@
+{%- set opt = {} -%}
+{%- from "_options.j2" import set_options with context -%}
+{{- set_options(opt) -}}
+{%- extends "base_config.hpp.j2" -%}
