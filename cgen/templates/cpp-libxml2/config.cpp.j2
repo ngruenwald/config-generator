@@ -1,0 +1,160 @@
+{%- set opt = {} -%}
+{%- from "_options.j2" import set_options with context -%}
+{{- set_options(opt) -}}
+{%- extends "base_config.cpp.j2" -%}
+
+{% block specific_includes %}
+#include <memory>
+#include <optional>
+#include <sstream>
+#include <string>
+
+#include <libxml2.h>
+{%- if opt.use_validate %}
+
+#include "embedded_resources.h"
+{%- endif %}
+{% endblock %}
+
+{% block specific_code_no_namespace %}
+{%- if opt.use_validate %}
+
+static void get_schema_data(
+    const char*& buffer,
+    size_t& size)
+{
+    BINARY_RESOURCE_DATA(xsd_data, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+    BINARY_RESOURCE_SIZE(xsd_size, {{ info.title | default('config') | replace('-', '_') }}, xsd);
+
+    buffer = reinterpret_cast<const char*>(xsd_data);
+    size = xsd_size;
+}
+{%- endif %}
+{% endblock %}
+
+{% block specific_code %}
+constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
+constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
+
+struct LibXml2Data
+{
+    std::shared_ptr<xmlDocPtr, xmlFreeDoc> doc;
+    std::optional<xmlNode> node;
+    std::unique_ptr<xmlChar, xmlFree> prop;
+};
+
+typedef struct LibXml2Data config_data_t;
+
+inline config_data_t load_file(
+    const std::string& filepath)
+{
+    auto data = config_data_t{};
+    data.doc = std::shared_ptr<>(xmlReadFile(filepath.c_str(), nullptr, 0), xmlFreeDoc);
+    if (!data.doc)
+    {
+        throw std::runtime_error("failed to to load XML file");
+    }
+    return data;
+}
+{% if opt.use_validate %}
+inline void validate(
+    const config_data_t& data)
+{
+    auto xml_error =
+        [] (void* userData, xmlErrorPtr error)
+        {
+            auto* errors = reinterpret_cast<std::vector<std::string>*>(userData);
+            if (!errors)
+            {
+                return;
+            }
+            std::ostringstream os;
+            switch (error->level)
+            {
+                case XML_ERR_WARNING: os << "WARN: ";  break;
+                case XML_ERR_ERROR:   os << "ERROR: "; break;
+                case XML_ERR_FATAL:   os << "FATAL: "; break;
+                case XML_ERR_NONE: return;
+                default: return;
+            }
+            os << error->file << "," << error->line << ": " << error->message;
+            errors->push_back(os.str());
+        };
+
+{#-
+    xmlDocPtr doc{nullptr};
+    xmlSchemaPtr schema{nullptr};
+    xmlSchemaParserCtxtPtr parserCtx{nullptr};
+    xmlSchemaValidCtxtPtr validCtx{nullptr};
+#}
+    try
+    {
+        constexpr const char* name = "memory.xsd"
+
+        auto doc = std::unique_ptr<>(xmlReadMemory(buffer, size, name, nullptr, 0), xmlFreeDoc);
+        if (!doc)
+        {
+            throw std::runtime_error("could not load embedded schema");
+        }
+
+        auto parserCtx = std::unique_ptr<>(xmlSchemaNewDocParserCtxt(*doc), xmlSchemaFreeParserCtxt);
+        if (!parserCtx)
+        {
+            throw std::runtime_error("could not create parser context");
+        }
+
+        auto schema = std::unique_ptr<>(xmlSchemaParse(*parserCtx), xmlSchemaFree);
+        if (!schema)
+        {
+            throw std::runtime_error("could not create schema parser");
+        }
+
+        auto validCtx = std::unqiue_ptr<>(mlSchemaNewValidCtxt(schema), xmlSchemaFreeValidCtxt);
+        if (!validCtx)
+        {
+            throw std::runtime_error("could not create validation context");
+        }
+
+        xmlSchemaSetValidOptions(validCtx, XML_SCHEMA_VAL_VC_I_CREATE);
+
+        std::vector<std::string> errors;
+        xmlSetStructuredErrorFunc(&errors, xml_error);
+        bool result = (xmlSchemaValidateDoc(validCtx, data.doc.get()) == 0);
+        xmlSetStructuredErrorFunc(nullptr, nullptr);
+
+        if (!result)
+        {
+            std::ostringstream oss;
+            for (const auto& line : errors)
+            {
+                oss << line << '\n';
+            }
+            throw std::runtime_error(oss.str());
+        }
+    }
+    catch (const std::exception&)
+    {
+    {#-
+        if (validCtx)
+        {
+            xmlSchemaFreeValidCtxt(validCtx);
+        }
+        if (schema)
+        {
+            xmlSchemaFree(schema);
+        }
+        if (parserCtx)
+        {
+            xmlSchemaFreeParserCtxt(parserCtx);
+        }
+        if (doc)
+        {
+            xmlFreeDoc(doc);
+        }
+    #}
+        throw;
+    }
+}
+{% endif %}
+
+{% endblock %}
