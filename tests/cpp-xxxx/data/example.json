@@ -40,5 +40,9 @@
   "a_bool": false,
   "an_array": [0, 0],
   "a_dictionary": { "0": "0", "1": "1" },
-  "an_enum": "foo"
+  "an_enum": "foo",
+
+  "test42": {
+    "base-oid": "E001"
+  }
 }

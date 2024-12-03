@@ -22,9 +22,9 @@ static void from_data(
 {
 {%- for field in type.fields %}
 {%- if field.required %}
-    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_opts(field) -}});
+    get_mandatory_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_base(field) -}} {{- m.insert_opts(field) -}});
 {%- else %}
-    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_opts(field) -}});
+    get_optional_element(data, "{{ field.type.alias }}", value.{{ m.value_case(field.name) }} {{- m.insert_base(field) -}} {{- m.insert_opts(field) -}});
 {%- endif %}
 {%- endfor %}
 }
@@ -129,7 +129,16 @@ inline void get_mandatory_element(
     T& value
     {{- m.insert_fn_opts() -}})
 {
-    from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+    try
+    {
+        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+    }
+    catch (const std::exception& ex)
+    {
+        std::ostringstream oss;
+        oss << "failed to retrieve element '" << name << "': " << ex.what();
+        throw std::runtime_error(oss.str());
+    }
 }
 
 template<typename T>
@@ -141,7 +150,7 @@ inline void get_optional_element(
 {
     if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
-        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+        get_mandatory_element(data, name, value {{- m.insert_fd_opts() -}});
     }
 }
 {% if opt.use_optional %}
@@ -155,7 +164,57 @@ inline void get_optional_element(
     if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
         T tmp;
-        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), tmp {{- m.insert_fd_opts() -}});
+        get_mandatory_element(data, name, tmp {{- m.insert_fd_opts() -}});
+        value = tmp;
+    }
+}
+{% endif %}
+template<typename T>
+inline void get_mandatory_element(
+    const config_data_t& data,
+    const char* name,
+    T& value,
+    int base
+    {{- m.insert_fn_opts() -}})
+{
+    try
+    {
+        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value, base {{- m.insert_fd_opts() -}});
+    }
+    catch (const std::exception& ex)
+    {
+        std::ostringstream oss;
+        oss << "failed to retrieve element '" << name << "': " << ex.what();
+        throw std::runtime_error(oss.str());
+    }
+}
+
+template<typename T>
+inline void get_optional_element(
+    const config_data_t& data,
+    const char* name,
+    T& value,
+    int base
+    {{- m.insert_fn_opts() -}})
+{
+    if (contains_key(data, name {{- m.insert_fd_opts() -}}))
+    {
+        get_mandatory_element(data, name, value, base {{- m.insert_fd_opts() -}});
+    }
+}
+{% if opt.use_optional %}
+template<typename T>
+inline void get_optional_element(
+    const config_data_t& data,
+    const char* name,
+    std::optional<T>& value,
+    int base
+    {{- m.insert_fn_opts() -}})
+{
+    if (contains_key(data, name {{- m.insert_fd_opts() -}}))
+    {
+        T tmp;
+        get_mandatory_element(data, name, tmp, base {{- m.insert_fd_opts() -}});
         value = tmp;
     }
 }
@@ -169,7 +228,7 @@ inline void get_optional_element(
 {
     if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
-        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+        get_mandatory_element(data, name, value {{- m.insert_fd_opts() -}});
     }
 }
 
@@ -182,7 +241,7 @@ inline void get_optional_element(
 {
     if (contains_key(data, name {{- m.insert_fd_opts() -}}))
     {
-        from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+        get_mandatory_element(data, name, value {{- m.insert_fd_opts() -}});
     }
 }
 

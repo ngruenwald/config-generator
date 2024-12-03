@@ -163,3 +163,9 @@ _
 {%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
+
+{%- macro insert_base(field) -%}
+{%- if field.type.base and field.type.base != 10 -%}
+, {{ field.type.base }}
+{%- endif -%}
+{%- endmacro -%}

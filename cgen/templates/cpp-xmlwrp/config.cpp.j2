@@ -153,7 +153,7 @@ inline config_data_t get_key(
     }
 
     std::ostringstream msg;
-    msg << "invalid node";  // TODO: identify?
+    msg << "invalid node for key '" << key << "'";
     throw std::runtime_error(msg.str());
 }
 
@@ -177,6 +177,32 @@ inline void from_data(
         if (data.node.has_value())
         {
             value = config::from_string<T>(data.node.value().GetStringVal());
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    int base,
+    config_options opts)
+{
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (data.prop.has_value())
+        {
+            value = config::from_string<T>(data.prop.value(), base);
+            return;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node.has_value())
+        {
+            value = config::from_string<T>(data.node.value().GetStringVal(), base);
             return;
         }
     }

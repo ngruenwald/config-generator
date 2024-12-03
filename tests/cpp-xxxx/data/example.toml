@@ -43,3 +43,6 @@ am = 2
 [a_dictionary]
 0 = "0"
 1 = "1"
+
+[test42]
+base-oid = "E001"
