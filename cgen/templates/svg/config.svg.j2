@@ -1,0 +1,427 @@
+{%- set global_vars = namespace(
+      uniquifier = 0,
+      object_color_index = 0,
+      object_colors = [
+        '#8db3e2', '#ccc0d9', '#e5b8b7', '#fbd4b4',
+        '#D3F1D2', '#90CCDE', '#A09BCC', '#CBA6CC', '#F3C6D1', '#FDDADF',
+        '#FFFDB4', '#FFFDB4', '#FFFDB4',
+
+        '#dfdfdf'
+      ],
+      font_color = '#000000',
+      border_color = '#000000',
+      indent = 4,
+      bold_font = 'font-size:8px;line-height:1.25;font-family:Verdana;font-weight:bold',
+      normal_font = 'font-size:8px;line-height:1.25;font-family:Verdana;font-weight:normal',
+      array_color = '#dfdfdf',
+      dict_color = '#dfdfdf',
+      simple_color = '#f0f0f0'
+    )
+-%}
+
+{#-
+  Format the name of a field type
+
+  @param field the field
+  @returns the formatted type name
+-#}
+{%- macro format_type_name(field) -%}
+{#-
+{%-   if field.type.type in ['array']  -%}  {{ 'list[' + get_type_name(field.type.item_type) + ']' }}
+{%- elif field.type.type in ['dict']   -%}  {{ 'dict{' + get_type_name(field.type.key_type) + ':' + get_type_name(field.type.value_type) + '}' }}
+{%- elif field.type.type in ['object'] -%}  {{ 'object' }}
+{%- else -%}                                {{ field.type.type }}
+{%- endif -%}-#}
+{{ field.type.type }}
+{%- endmacro -%}
+
+{#-
+  Create an options structure
+
+  @param field the field to create the options for
+  @param vars mutable variables
+  @param opts_in input options
+  @param indent indentation of the box
+  @returns the new options structure
+-#}
+{%- macro create_opts(field, vars, opts_in, indent) -%}
+{%- set opts = {
+      'x': vars['x'] + indent,
+      'y': vars['y'],
+      'xo': 0,
+      'yo': 0,
+      'indent': global_vars.indent,
+      'line_height': 12,
+      'box': {
+        'width': opts_in['box']['width'] - indent,
+        'height': get_box_height(opts_in, field),
+        'color': get_box_color_ex(field),
+        'border_color': global_vars.border_color,
+        'border_width': 1.0
+      },
+      'columns': [
+        {
+          'name': opts_in['columns'][0]['name'],
+          'width': opts_in['columns'][0]['width'] - indent,
+          'text': field.name | default('')
+        },
+        {
+          'name': opts_in['columns'][1]['name'],
+          'width': opts_in['columns'][1]['width'],
+          'text': format_type_name(field)
+        },
+        {
+          'name': opts_in['columns'][2]['name'],
+          'width': opts_in['columns'][2]['width'],
+          'text': '*' if field.type.type in ['array', 'dict'] else ''
+        },
+        {
+          'name': opts_in['columns'][3]['name'],
+          'width': opts_in['columns'][3]['width'],
+          'text': 'M' if field.required else 'O'
+        },
+        {
+          'name': opts_in['columns'][4]['name'],
+          'width': opts_in['columns'][4]['width'],
+          'text': field.description | default('')
+        }
+      ]
+    }
+-%}
+{{ opts }}
+{%- endmacro -%}
+
+{#-
+  Returns one of the configured object_colors, based on the current index.
+
+  @modifies 'global_vars.object_color_index'
+-#}
+{%- macro get_box_color() -%}
+{{ global_vars.object_colors[global_vars.object_color_index] }}
+{%- set global_vars.object_color_index = global_vars.object_color_index + 1 -%}
+{%- if global_vars.object_color_index >= global_vars.object_colors | length -%}
+{%- set global_vars.object_color_index = 0 -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro get_box_color_ex(field) -%}
+  {%-   if field.type.type == 'object' %}{{ get_box_color() }}
+  {%- elif field.type.type == 'array'  %}{{ global_vars.array_color }}
+  {%- elif field.type.type == 'dict'   %}{{ global_vars.dict_color }}
+  {%- else                             %}{{ global_vars.simple_color }}
+  {%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Returns the name of the given type.
+-#}
+{%- macro get_type_name(type) -%}
+{%- if type.type in ['object'] -%}{{ type.name }}
+{%- else -%}{{ type.type }}
+{%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Creates a unique id based on the given parts and the global uniquifier.
+
+  @param parts list of strings
+  @modifies global_vars.uniquifier
+-#}
+{%- macro create_id(parts) -%}
+{%- set global_vars.uniquifier = global_vars.uniquifier + 1 -%}
+{%- for part in parts %}{{ part }}-{% endfor %}{{ global_vars.uniquifier }}
+{%- endmacro -%}
+
+{#-
+  Calculates the x offset of the given column
+
+  @param opts input options
+  @param offset fixed offset
+  @param index column index
+-#}
+{%- macro offset_x(opts, offset, index) -%}
+  {%- set vars = { 'offset': (offset + index + 1) } -%}
+  {%- for column in opts.columns -%}
+    {%- if loop.index0 < index -%}
+      {%- if vars.update({'offset': (vars['offset'] + column.width)}) %}{% endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{{ vars['offset'] }}
+{%- endmacro -%}
+
+{#-
+  Escape reserved XML characters
+
+  @param text input text
+-#}
+{%- macro sanitize_text(text) -%}
+{{ text | replace('&', '&amp;') | replace('<', '&lt;') | replace('>', '&gt;') | replace('\'', '&apos;') }}
+{%- endmacro -%}
+
+{#-
+  Calculates the height of a box
+
+  @param opts render options
+  @param field the field
+-#}
+{%- macro get_box_height(opts, field) -%}
+  {%- set v = { 'h': opts.line_height} -%}
+  {%- if field.type.type in ['object'] -%}
+    {%- for child in field.type.fields -%}
+      {%- if child.type.type in ['array', 'dict', 'object'] -%}
+        {%- set _ = v.update({'h': v['h'] + get_box_height(opts, child) | int}) -%}
+      {%- else -%}
+        {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- elif field.type.type in ['array'] -%}
+    {%- if field.type.item_type.type in ['array', 'dict', 'object'] -%}
+      {%- set field_item = {'type': field.type.item_type} -%}
+      {%- set _ = v.update({'h': v['h'] + get_box_height(opts, field_item) | int}) -%}
+    {%- else -%}
+      {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
+    {%- endif -%}
+  {%- elif field.type.type in ['dict'] -%}
+    {%- if field.type.key_type.type in ['array', 'dict', 'object'] -%}
+      {%- set field_key = {'type': field.type.key_type} -%}
+      {%- set _ = v.update({'h': v['h'] + get_box_height(opts, field_key) | int}) -%}
+    {%- else -%}
+      {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
+    {%- endif -%}
+    {%- if field.type.value_type.type in ['array', 'dict', 'object'] -%}
+      {%- set field_value = {'type': field.type.value_type}%}
+      {%- set _ = v.update({'h': v['h'] + get_box_height(opts, field_value) | int}) -%}
+    {%- else -%}
+      {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
+    {%- endif -%}
+  {%- endif -%}
+{{ v['h'] }}
+{%- endmacro -%}
+
+{#-
+  Renders an element
+
+  @param elm the element to render
+  @param opts render options
+-#}
+{%- macro render_element(elm, opts) -%}
+{%- set vars = {'x': opts.x, 'y': opts.y} %}
+<g id="{{ create_id([elm.name, 'element']) }}">
+{% filter indent(2) %}
+<rect
+  x="{{ vars['x'] }}"
+  y="{{ vars['y'] }}"
+  width="{{ opts.box.width }}"
+  height="{{ opts.box.height }}"
+  id="{{ create_id([elm.name, 'box']) }}"
+  style="fill:{{ opts.box.color }};stroke:{{ opts.box.border_color }};stroke-width:{{ opts.box.border_width }}"
+  />
+{% for column in opts.columns -%}
+{{ render_textblock(elm, opts, column, loop.index0) }}
+{% endfor -%}
+
+{%-   if elm.type.type == 'array'  -%} {{ render_element_array(elm, vars, opts)  }}
+{%- elif elm.type.type == 'dict'   -%} {{ render_element_dict(elm, vars, opts)   }}
+{%- elif elm.type.type == 'object' -%} {{ render_element_object(elm, vars, opts) }}
+{%- endif -%}
+
+{%- endfilter -%}
+{%- if opts.update({'xo': vars['x']}) -%}{%- endif -%}
+{%- if opts.update({'yo': vars['y']}) -%}{%- endif -%}
+</g>
+{% endmacro -%}
+
+{#-
+  Renders a textblock
+
+  @param elm the parent element
+  @param opts render options
+  @param column the column to render
+  @param index the column index
+-#}
+{%- macro render_textblock(elm, opts, column, index) -%}
+{#-<g id="{{ create_id([elm.name, column.name]) }}">
+  <rect
+    x="{{ offset_x(opts, opts.x + 0, index) }}"
+    y="{{ opts.y + 1 }}"
+    width="{{ column.width }}"
+    height="{{ opts.line_height }}"
+    id="{{ create_id([elm.name, column.name, 'box']) }}"
+    style="fill:#00ff00"
+    /> -#}
+<text
+  x="{{ offset_x(opts, opts.x + 4, index) }}"
+  y="{{ opts.y + 8 }}"
+  id="{{ create_id([elm.name, column.name, 'text']) }}"
+  fill="{{ opts.font_color | default(global_vars.font_color) }}"
+  style="{{ opts.font | default(global_vars.normal_font) }}"
+  >
+  {{ sanitize_text(column.text) }}
+</text>
+{#-</g>-#}
+{%- endmacro -%}
+
+{%- macro render_field(elm, field, vars, opts) -%}
+  {%-   if field.type.type in ['array']   -%} {{ render_field_array(elm, opts, field, vars)  }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
+  {%- elif field.type.type in ['dict']    -%} {{ render_field_dict(elm, opts, field, vars)   }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
+  {%- elif field.type.type in ['object']  -%} {{ render_field_object(elm, opts, field, vars) }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
+  {%- else -%}                                {{ render_field_simple(elm, opts, field, vars) }}
+  {%- endif %}
+{%- endmacro -%}
+
+{%- macro render_element_array(elm, vars, opts) -%}
+  {%- set field_item = {'name': elm.type.item_name, 'type': elm.type.item_type, 'required': False} -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'item' box #}{%- endif -%}
+{{ render_field(elm, field_item, vars, opts) }}
+{%- endmacro -%}
+
+{%- macro render_element_dict(elm, vars, opts) -%}
+  {%- set field_key = {'name': 'key', 'type': elm.type.key_type, 'required': True} -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'key' box #}{%- endif -%}
+{{ render_field(elm, field_key, vars, opts) }}
+  {%- set field_value = {'name': 'value', 'type': elm.type.value_type, 'required': True} -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'value' box #}{%- endif -%}
+{{ render_field(elm, field_value, vars, opts) }}
+{%- endmacro -%}
+
+{%- macro render_element_object(elm, vars, opts) -%}
+  {% for field in elm.type.fields %}
+    {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{%- endif -%}
+    {{ render_field(elm, field, vars, opts) }}
+  {% endfor %}
+{%- endmacro -%}
+
+{#-
+  Renders a field of type array
+
+  @param parent the parent element
+  @param opts render options
+  @param field the field to render
+  @param vars input/output variables
+-#}
+{%- macro render_field_array(parent, opts, field, vars) -%}
+{%- set fopts = create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict -%}
+<g id="{{ create_id([parent.name, field.name, 'element']) }}">
+{%- filter indent(2) -%}
+{{ render_element(field, fopts) }}
+{%- endfilter -%}
+</g>
+<!-- fopts={{ fopts }} -->
+{%- if opts.update({'xo': fopts.xo}) -%}{%- endif -%}
+{%- if opts.update({'yo': fopts.yo}) -%}{%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Renders a field of type dictionary
+
+  @param parent the parent element
+  @param opts render options
+  @param field the field to render
+  @param vars input/output variables
+-#}
+{%- macro render_field_dict(parent, opts, field, vars) -%}
+{%- set fopts = create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict -%}
+<g id="{{ create_id([parent.name, field.name, 'element']) }}">
+{%- filter indent(2) -%}
+{{ render_element(field, fopts) }}
+{%- endfilter -%}
+</g>
+{%- if opts.update({'xo': fopts.xo}) -%}{%- endif -%}
+{%- if opts.update({'yo': fopts.yo}) -%}{%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Renders a field of type object
+
+  @param parent the parent element
+  @param opts render options
+  @param field the field to render
+  @param vars input/output variables
+-#}
+{%- macro render_field_object(parent, opts, field, vars) -%}
+{%- set fopts = create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict -%}
+<g id="{{ create_id([parent.name, field.name, 'element']) }}">
+{%- filter indent(2) -%}
+{{ render_element(field, fopts) }}
+{%- endfilter -%}
+</g>
+{%- if opts.update({'xo': fopts.xo}) -%}{%- endif -%}
+{%- if opts.update({'yo': fopts.yo}) -%}{%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Renders a simple field
+
+  @param parent the parent element
+  @param opts render options
+  @param field the field to render
+  @param vars input/output variables
+-#}
+{%- macro render_field_simple(parent, opts, field, vars) -%}
+<g id="{{ create_id([parent.name, field.name, 'element']) }}">
+{%- filter indent(2) -%}
+{{ render_element(field, create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict) }}
+{%- endfilter -%}
+</g>
+{%- endmacro -%}
+
+
+{#-
+  Main element
+
+  @param object the config object
+-#}
+{%- macro main_element(object) -%}
+
+  {%- set element = {
+        'name': 'svg-title',
+        'type': {
+          'type': 'object',
+          'fields': [
+            {
+              'name': 'config',
+              'type': object,
+              'required': True
+            }
+          ],
+          'required': True
+        }
+      }
+  -%}
+
+  {%- set opts = {
+    'x': 0,
+    'y': 0,
+    'xo': 0,
+    'yo': 0,
+    'indent': 0,
+    'box': {
+      'width': 800,
+      'height': 0,
+      'color': '#ffffff',
+      'border_color': global_vars.border_color,
+      'border_width': global_vars.border_width,
+    },
+    'columns': [
+      { 'name': 'title',       'width': 100, 'text': 'Element' },
+      { 'name': 'type',        'width': 150, 'text': 'Type' },
+      { 'name': 'unknown',     'width':  30, 'text': '' },
+      { 'name': 'usage',       'width':  15, 'text': '' },
+      { 'name': 'description', 'width': 100, 'text': 'Description' },
+    ],
+    'line_height': 12,
+    'font': global_vars.bold_font
+  }
+  -%}
+
+  {%- set _ = opts['box'].update({'height': get_box_height(opts, element)}) -%}
+
+  {{- render_element(element, opts) -}}
+
+{%- endmacro -%}
+
+<svg id="config" style="background-color:white">
+{% filter indent(2) %}
+{{ main_element(config) }}
+{% endfilter %}
+</svg>
