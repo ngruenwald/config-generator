@@ -22,6 +22,7 @@ from .jinja_filters import (
     j2_camel_case,
     j2_pascal_case,
     j2_snake_case,
+    j2_str_to_dict,
     j2_title_case,
     j2_is_type,
 )
@@ -457,6 +458,7 @@ def config_generator(
         env.filters["snake_case"] = j2_snake_case
         env.filters["title_case"] = j2_title_case
         env.filters["base"] = j2_base
+        env.filters["to_dict"] = j2_str_to_dict
         env.tests["Type"] = j2_is_type
 
         create_path(output_path)

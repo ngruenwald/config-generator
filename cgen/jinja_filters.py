@@ -1,3 +1,5 @@
+from ast import literal_eval as ast_literal_eval
+
 from .spec_types import Type
 
 
@@ -44,3 +46,7 @@ def j2_base(input: str, base: int) -> str:
 
 def j2_is_type(input):
     return isinstance(input, Type)
+
+
+def j2_str_to_dict(input):
+    return ast_literal_eval(input)
