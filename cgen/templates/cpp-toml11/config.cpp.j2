@@ -47,6 +47,15 @@ inline void from_data(
     assert(false);
 }
 
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    int base)
+{
+    assert(false);
+}
+
 inline void from_data(
     const config_data_t& data,
     bool& value)
@@ -63,9 +72,25 @@ inline void from_data(
 
 inline void from_data(
     const config_data_t& data,
+    int& value,
+    int base)
+{
+    value = config::from_string<int>(data.as_string(), base);
+}
+
+inline void from_data(
+    const config_data_t& data,
     unsigned int& value)
 {
     value = data.as_integer();
+}
+
+inline void from_data(
+    const config_data_t& data,
+    unsigned int& value,
+    int base)
+{
+    value = config::from_string<unsigned int>(data.as_string(), base);
 }
 
 inline void from_data(

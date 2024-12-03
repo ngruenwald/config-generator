@@ -81,4 +81,7 @@
     </entry>
   </a_dictionary>
   <!--<an_enum>"foo"</an_enum>-->
+
+  <test42 base-oid="E001" />
+
 </config>

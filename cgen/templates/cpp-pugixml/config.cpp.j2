@@ -180,6 +180,32 @@ inline void from_data(
 
 template<typename T>
 inline void from_data(
+    const config_data_t& data,
+    T& value,
+    int base,
+    config_options opts)
+{
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (data.attr.has_value())
+        {
+            value = config::from_string<T>(data.attr.value().as_string(), base);
+            return;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node.has_value())
+        {
+            value = config::from_string<T>(data.node.value().child_value(), base);
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
     const T& data,
     T& value,
     [[maybe_unused]] config_options opts)

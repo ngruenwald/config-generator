@@ -73,6 +73,7 @@ int main(int argc, char** argv)
 
     TEST(config->an_enum == config::LittleEnum::Foo);
 
+    TEST(config->test42.base_oid == 0xe001);
 
     std::cout << '\n' << *config << '\n';
 

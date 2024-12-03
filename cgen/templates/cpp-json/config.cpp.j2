@@ -57,6 +57,17 @@ inline void from_data(
 
 template<typename T>
 inline void from_data(
+    const config_data_t& data,
+    T& value,
+    int base)
+{
+    std::string tmp;
+    data.get_to(tmp);
+    value = config::from_string<T>(tmp, base);
+}
+
+template<typename T>
+inline void from_data(
     const T& data,
     T& value)
 {

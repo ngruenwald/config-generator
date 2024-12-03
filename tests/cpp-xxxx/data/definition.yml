@@ -56,6 +56,9 @@ elements:
     $ref: '#/types/little-enum'
     required: True
 
+  test42:
+    $ref: '#/types/test42'
+    required: True
 
 types:
   many-types:
@@ -199,3 +202,21 @@ types:
   #   type: array
   #   items:
   #     type: float
+
+  oid:
+    description: Object Identifier
+    type: uint
+    base: 16
+    min: 0x0000
+    max: 0xffff
+
+  test42:
+    description: Test 42
+    type: object
+    properties:
+      base-oid:
+        description: The base object identifier
+        $ref: '#/types/oid'
+    required:
+      - base-oid
+
