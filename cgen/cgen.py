@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from .doc import create_render_data
-from .jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
+from .jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_str_to_dict, j2_title_case, j2_is_type
 from .spec_types import ArrayType, DictionaryType, ObjectType, ObjectField, Type
 from .spec_types import Constraint
 from .spec_types import load_type, load_constraints
@@ -276,6 +276,7 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
         env.filters['snake_case'] = j2_snake_case
         env.filters['title_case'] = j2_title_case
         env.filters['base'] = j2_base
+        env.filters['to_dict'] = j2_str_to_dict
         env.tests['Type'] = j2_is_type
 
         create_path(output_path)
