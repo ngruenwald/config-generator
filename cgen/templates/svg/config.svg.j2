@@ -2,20 +2,31 @@
       uniquifier = 0,
       object_color_index = 0,
       object_colors = [
-        '#8db3e2', '#ccc0d9', '#e5b8b7', '#fbd4b4',
-        '#D3F1D2', '#90CCDE', '#A09BCC', '#CBA6CC', '#F3C6D1', '#FDDADF',
-        '#FFFDB4', '#FFFDB4', '#FFFDB4',
+        '#C6E2FF', '#D5E8D4', '#AFCBFF', '#B4CFD3', '#A3E4D7', '#D5E8D4',
 
-        '#dfdfdf'
+        '#FFD1DC', '#FFB3BA', '#A3E4D7', '#D9C9E3', '#B4CFD3',
+        '#C8A2C8', '#A0B0C9', '#D5E8D4', '#B9A7D6', '#F3C5C5',
+        '#F7CAC9', '#C0A3C9', '#FDFD96', '#C2D0E3', '#B1C7D0',
+        '#E1C1E4', '#B39EB5', '#C1C8E4', '#F9CB9C', '#D2B9D1',
+        '#C4B6D1', '#EBD4CB', '#D0EFB1', '#C6E2FF', '#B5C2D6',
+        '#FBE7C6', '#A1B1C1', '#D0C1E0', '#F8B88B', '#F4BFBF',
+        '#D1B1E0', '#E5D9F2', '#B6C6D1', '#D1C7F0', '#A3B5D6',
+        '#B9A1D4', '#D3E0EB', '#B8A1D1', '#C2B3D1', '#C2D0E3',
+        '#D3E0EB', '#A8E6CF', '#D1B2E6', '#FFDFBA', '#B9A1D4'
       ],
       font_color = '#000000',
       border_color = '#000000',
+      border_width = 1.0,
       indent = 5,
+      image_width = 800,
+      line_height = 12,
       bold_font = 'font-size:8px;line-height:1.25;font-family:Verdana;font-weight:bold',
       normal_font = 'font-size:8px;line-height:1.25;font-family:Verdana;font-weight:normal',
       array_color = '#dfdfdf',
       dict_color = '#dfdfdf',
-      simple_color = '#f0f0f0'
+      enum_color = '#dfdfdf',
+      simple_color = '#f0f0f0',
+      compact_enum = True
     )
 -%}
 
@@ -26,13 +37,12 @@
   @returns the formatted type name
 -#}
 {%- macro format_type_name(field) -%}
-{#-
-{%-   if field.type.type in ['array']  -%}  {{ 'list[' + get_type_name(field.type.item_type) + ']' }}
-{%- elif field.type.type in ['dict']   -%}  {{ 'dict{' + get_type_name(field.type.key_type) + ':' + get_type_name(field.type.value_type) + '}' }}
-{%- elif field.type.type in ['object'] -%}  {{ 'object' }}
-{%- else -%}                                {{ field.type.type }}
-{%- endif -%}-#}
-{{ field.type.type }}
+{%-   if field.type.type == 'array'  -%} {{ '[…]' }}
+{%- elif field.type.type == 'dict'   -%} {{ '{ : }' }}
+{%- elif field.type.type == 'enum'   -%} {{ field.type.name + ' [' + field.type.base_type + ']' }}
+{%- elif field.type.type == 'object' -%} {{ ''   }}
+{%- else                             -%} {{ field.type.type }}
+{%- endif -%}
 {%- endmacro -%}
 
 {#-
@@ -50,14 +60,14 @@
       'y': vars['y'],
       'xo': 0,
       'yo': 0,
-      'indent': global_vars.indent,
-      'line_height': 12,
+      'indent': indent if indent else global_vars.indent,
+      'line_height': global_vars.line_height,
       'box': {
         'width': opts_in['box']['width'] - indent,
-        'height': get_box_height(opts_in, field),
+        'height': get_box_height(opts_in, field, field.name),
         'color': get_box_color_ex(field),
         'border_color': global_vars.border_color,
-        'border_width': 1.0
+        'border_width': global_vars.border_width
       },
       'columns': [
         {
@@ -78,7 +88,7 @@
         {
           'name': opts_in['columns'][3]['name'],
           'width': opts_in['columns'][3]['width'],
-          'text': 'M' if field.required else 'O'
+          'text': '' if field.required is none else ('M' if field.required else 'O')
         },
         {
           'name': opts_in['columns'][4]['name'],
@@ -105,10 +115,11 @@
 {%- endmacro -%}
 
 {%- macro get_box_color_ex(field) -%}
-  {%-   if field.type.type == 'object' %}{{ get_box_color() }}
-  {%- elif field.type.type == 'array'  %}{{ global_vars.array_color }}
-  {%- elif field.type.type == 'dict'   %}{{ global_vars.dict_color }}
-  {%- else                             %}{{ global_vars.simple_color }}
+  {%-   if field.type.type == 'array'  -%} {{ global_vars.array_color }}
+  {%- elif field.type.type == 'dict'   -%} {{ global_vars.dict_color }}
+  {%- elif field.type.type == 'enum'   -%} {{ global_vars.enum_color }}
+  {%- elif field.type.type == 'object' -%} {{ get_box_color() }}
+  {%- else                             -%} {{ global_vars.simple_color }}
   {%- endif -%}
 {%- endmacro -%}
 
@@ -164,38 +175,54 @@
   @param opts render options
   @param field the field
 -#}
-{%- macro get_box_height(opts, field) -%}
-  {%- set v = { 'h': opts.line_height} -%}
-  {%- if field.type.type in ['object'] -%}
-    {%- for child in field.type.fields -%}
-      {%- if child.type.type in ['array', 'dict', 'object'] -%}
-        {%- set _ = v.update({'h': v['h'] + get_box_height(opts, child) | int}) -%}
-      {%- else -%}
-        {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
-      {%- endif -%}
-    {%- endfor -%}
-  {%- elif field.type.type in ['array'] -%}
-    {%- if field.type.item_type.type in ['array', 'dict', 'object'] -%}
-      {%- set field_item = {'type': field.type.item_type} -%}
-      {%- set _ = v.update({'h': v['h'] + get_box_height(opts, field_item) | int}) -%}
-    {%- else -%}
-      {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
-    {%- endif -%}
-  {%- elif field.type.type in ['dict'] -%}
-    {%- if field.type.key_type.type in ['array', 'dict', 'object'] -%}
-      {%- set field_key = {'type': field.type.key_type} -%}
-      {%- set _ = v.update({'h': v['h'] + get_box_height(opts, field_key) | int}) -%}
-    {%- else -%}
-      {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
-    {%- endif -%}
-    {%- if field.type.value_type.type in ['array', 'dict', 'object'] -%}
-      {%- set field_value = {'type': field.type.value_type}%}
-      {%- set _ = v.update({'h': v['h'] + get_box_height(opts, field_value) | int}) -%}
-    {%- else -%}
-      {%- set _ = v.update({'h': v['h'] + opts.line_height}) -%}
-    {%- endif -%}
+{%- macro get_box_height(opts, field, trace_id) -%}
+{#-{{- (trace_id + ' : ' + field | pprint) | debug -}}-#}
+  {%- set vars = { 'h': opts.line_height} -%}
+  {%-   if field.type.type in ['array']  -%} {{ get_box_height_array(field, opts, vars, trace_id) }}
+  {%- elif field.type.type in ['dict']   -%} {{ get_box_height_dict(field, opts, vars, trace_id) }}
+  {%- elif field.type.type in ['enum']   -%} {{ get_box_height_enum(field, opts, vars, trace_id) }}
+  {%- elif field.type.type in ['object'] -%} {{ get_box_height_object(field, opts, vars, trace_id) }}
   {%- endif -%}
-{{ v['h'] }}
+{{ vars['h'] }}
+{%- endmacro -%}
+
+{%- macro get_box_height_array(field, opts, vars, trace_id) -%}
+  {%- if field.type.item_type.type in ['array', 'dict', 'object'] -%}
+    {%- set field_item = {'type': field.type.item_type} -%}
+    {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, field_item, trace_id) | int}) -%}
+  {%- else -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro get_box_height_dict(field, opts, vars, trace_id) -%}
+  {%- if field.type.key_type.type in ['array', 'dict', 'object'] -%}
+    {%- set field_key = {'type': field.type.key_type} -%}
+    {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, field_key, trace_id) | int}) -%}
+  {%- else -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+  {%- endif -%}
+  {%- if field.type.value_type.type in ['array', 'dict', 'object'] -%}
+    {%- set field_value = {'type': field.type.value_type}%}
+    {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, field_value, trace_id) | int}) -%}
+  {%- else -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro get_box_height_enum(field, opts, vars, trace_id) -%}
+  {%- if global_vars.compact_enum -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+  {%- else -%}
+    {%- set enum_count = field.type.enum | length %}
+    {%- set _ = vars.update({'h': vars['h'] + (opts.line_height * (enum_count if enum_count else 1))}) -%}
+  {%- endif -%}
+{%- endmacro -%}
+
+{%- macro get_box_height_object(field, opts, vars, trace_id) -%}
+  {%- for child in field.type.fields -%}
+    {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, child, trace_id) | int}) -%}
+  {%- endfor -%}
 {%- endmacro -%}
 
 {#-
@@ -220,8 +247,9 @@
 {{ render_textblock(elm, opts, column, loop.index0) }}
 {% endfor -%}
 
-{%-   if elm.type.type == 'array'  -%} {{ render_element_array(elm, vars, opts)  }}
-{%- elif elm.type.type == 'dict'   -%} {{ render_element_dict(elm, vars, opts)   }}
+{%-   if elm.type.type == 'array'  -%} {{ render_element_array(elm, vars, opts) }}
+{%- elif elm.type.type == 'dict'   -%} {{ render_element_dict(elm, vars, opts) }}
+{%- elif elm.type.type == 'enum'   -%} {{ render_element_enum(elm, vars, opts) }}
 {%- elif elm.type.type == 'object' -%} {{ render_element_object(elm, vars, opts) }}
 {%- endif -%}
 
@@ -250,7 +278,7 @@
     style="fill:#00ff00"
     /> -#}
 <text
-  x="{{ offset_x(opts, opts.x + 4, index) }}"
+  x="{{ offset_x(opts, opts.x + opts.indent, index) }}"
   y="{{ opts.y + 8 }}"
   id="{{ create_id([elm.name, column.name, 'text']) }}"
   fill="{{ opts.font_color | default(global_vars.font_color) }}"
@@ -264,13 +292,14 @@
 {%- macro render_field(elm, field, vars, opts) -%}
   {%-   if field.type.type in ['array']   -%} {{ render_field_array(elm, opts, field, vars)  }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
   {%- elif field.type.type in ['dict']    -%} {{ render_field_dict(elm, opts, field, vars)   }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
+  {%- elif field.type.type in ['enum']    -%} {{ render_field_enum(elm, opts, field, vars)   }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
   {%- elif field.type.type in ['object']  -%} {{ render_field_object(elm, opts, field, vars) }} {%- if vars.update({'y': opts.yo}) %}{% endif %}
   {%- else -%}                                {{ render_field_simple(elm, opts, field, vars) }}
   {%- endif %}
 {%- endmacro -%}
 
 {%- macro render_element_array(elm, vars, opts) -%}
-  {%- set field_item = {'name': elm.type.item_name, 'type': elm.type.item_type, 'required': False} -%}
+  {%- set field_item = {'name': elm.type.item_name, 'type': elm.type.item_type, 'required': None} -%}
   {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'item' box #}{%- endif -%}
 {{ render_field(elm, field_item, vars, opts) }}
 {%- endmacro -%}
@@ -282,6 +311,27 @@
   {%- set field_value = {'name': 'value', 'type': elm.type.value_type, 'required': True} -%}
   {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'value' box #}{%- endif -%}
 {{ render_field(elm, field_value, vars, opts) }}
+{%- endmacro -%}
+
+{%- macro render_element_enum(elm, vars, opts) -%}
+{%- if global_vars.compact_enum -%}
+  {%- set ve = {'enumerations': ''} -%}
+  {%- for enum in elm.type.enum -%}
+    {%- set _= ve.update({'enumerations': ve['enumerations'] + enum | string}) -%}
+    {%- if not loop.last -%}
+      {%- set _ = ve.update({'enumerations': ve['enumerations'] + ' / '}) -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- set field_enum = {'name': ve['enumerations'], 'type': '', 'description': '', 'required': None} -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{%- endif -%}
+{{ render_field(elm, field_enum, vars, opts) }}
+{%- else -%}
+  {% for enum in elm.type.enum %}
+    {%- set field_enum = {'name': enum, 'type': '', 'description': '', 'required': None} -%}
+    {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{%- endif -%}
+{{ render_field(elm, field_enum, vars, opts) }}
+  {% endfor %}
+{%- endif -%}
 {%- endmacro -%}
 
 {%- macro render_element_object(elm, vars, opts) -%}
@@ -306,7 +356,6 @@
 {{ render_element(field, fopts) }}
 {%- endfilter -%}
 </g>
-<!-- fopts={{ fopts }} -->
 {%- if opts.update({'xo': fopts.xo}) -%}{%- endif -%}
 {%- if opts.update({'yo': fopts.yo}) -%}{%- endif -%}
 {%- endmacro -%}
@@ -320,6 +369,25 @@
   @param vars input/output variables
 -#}
 {%- macro render_field_dict(parent, opts, field, vars) -%}
+{%- set fopts = create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict -%}
+<g id="{{ create_id([parent.name, field.name, 'element']) }}">
+{%- filter indent(2) -%}
+{{ render_element(field, fopts) }}
+{%- endfilter -%}
+</g>
+{%- if opts.update({'xo': fopts.xo}) -%}{%- endif -%}
+{%- if opts.update({'yo': fopts.yo}) -%}{%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Renders a field of type enum
+
+  @param parent the parent element
+  @param opts render options
+  @param field the field to render
+  @param vars input/output variables
+-#}
+{%- macro render_field_enum(parent, opts, field, vars) -%}
 {%- set fopts = create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict -%}
 <g id="{{ create_id([parent.name, field.name, 'element']) }}">
 {%- filter indent(2) -%}
@@ -396,7 +464,7 @@
     'yo': 0,
     'indent': 0,
     'box': {
-      'width': 700,
+      'width': global_vars.image_width,
       'height': 0,
       'color': '#ffffff',
       'border_color': global_vars.border_color,
@@ -409,12 +477,12 @@
       { 'name': 'usage',       'width':  15, 'text': '' },
       { 'name': 'description', 'width': 150, 'text': 'Description' },
     ],
-    'line_height': 12,
+    'line_height': global_vars.line_height,
     'font': global_vars.bold_font
   }
   -%}
 
-  {%- set _ = opts['box'].update({'height': get_box_height(opts, element)}) -%}
+  {%- set _ = opts['box'].update({'height': get_box_height(opts, element, '42')}) -%}
 
   {{- render_element(element, opts) -}}
 
