@@ -20,6 +20,7 @@ from .doc import create_render_data
 from .jinja_filters import (
     j2_base,
     j2_camel_case,
+    j2_debug_print,
     j2_pascal_case,
     j2_snake_case,
     j2_str_to_dict,
@@ -459,6 +460,7 @@ def config_generator(
         env.filters["title_case"] = j2_title_case
         env.filters["base"] = j2_base
         env.filters["to_dict"] = j2_str_to_dict
+        env.filters["debug"] = j2_debug_print
         env.tests["Type"] = j2_is_type
 
         create_path(output_path)
