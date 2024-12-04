@@ -14,6 +14,9 @@ message(STATUS "TEMPLATE: ${TEMPLATE}")
 
 include(FetchContent)
 include(cgen)
+include(sanitizers)
+
+add_sanitizer_support(address leak)
 
 if("${TEMPLATE}" STREQUAL "all")
   set(USE_JSON ON)
