@@ -50,3 +50,7 @@ def j2_is_type(input):
 
 def j2_str_to_dict(input):
     return ast_literal_eval(input)
+
+def j2_debug_print(input):
+    print(f"{input}")
+    return ''
