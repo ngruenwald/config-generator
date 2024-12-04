@@ -9,7 +9,9 @@
 #include <sstream>
 #include <string>
 
-#include <libxml2.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xmlschemas.h>
 {%- if opt.use_validate %}
 
 #include "embedded_resources.h"
@@ -33,14 +35,51 @@ static void get_schema_data(
 {% endblock %}
 
 {% block specific_code %}
+struct config_options
+{
+    unsigned long flags{0};
+    const char* elementName{"entry"};
+
+    config_options() = default;
+    config_options(unsigned long f) : flags{f} {}
+    config_options(const char* en) : elementName{en} {}
+    config_options(unsigned long f, const char* en) : flags{f}, elementName{en} {}
+};
+
 constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
 constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
 
+template<typename T>
+class LibXml2Deleter
+{
+public:
+    explicit LibXml2Deleter(void(*freeFn)(T*)) : freeFn_{freeFn} {}
+    void operator()(T* p) const { freeFn_(p); }
+private:
+    void(*freeFn_)(T*);
+};
+
 struct LibXml2Data
 {
-    std::shared_ptr<xmlDocPtr, xmlFreeDoc> doc;
-    std::optional<xmlNode> node;
-    std::unique_ptr<xmlChar, xmlFree> prop;
+    xmlDocPtr doc{nullptr};
+    xmlNodePtr node{nullptr};
+    xmlChar* prop{nullptr};
+
+    LibXml2Data() {}
+    LibXml2Data(xmlNodePtr n) : node{n} {}
+    LibXml2Data(xmlChar* p) : prop(p) {}
+
+    ~LibXml2Data()
+    {
+        if (doc)
+        {
+            xmlFreeDoc(doc);
+        }
+        if (prop)
+        {
+            xmlFree(prop);
+        }
+    }
 };
 
 typedef struct LibXml2Data config_data_t;
@@ -49,67 +88,78 @@ inline config_data_t load_file(
     const std::string& filepath)
 {
     auto data = config_data_t{};
-    data.doc = std::shared_ptr<>(xmlReadFile(filepath.c_str(), nullptr, 0), xmlFreeDoc);
+    data.doc = xmlReadFile(filepath.c_str(), nullptr, 0);
     if (!data.doc)
     {
         throw std::runtime_error("failed to to load XML file");
     }
+    data.node = xmlDocGetRootElement(data.doc);
+    if (!data.node)
+    {
+        xmlFreeDoc(data.doc);
+        throw std::runtime_error("empty file");
+    }
     return data;
 }
 {% if opt.use_validate %}
+static void xml_error_handler(
+    void* userData,
+    const xmlError* error)
+{
+    auto* errors = reinterpret_cast<std::vector<std::string>*>(userData);
+    if (!errors)
+    {
+        return;
+    }
+    std::ostringstream os;
+    switch (error->level)
+    {
+        case XML_ERR_WARNING: os << "WARN: ";  break;
+        case XML_ERR_ERROR:   os << "ERROR: "; break;
+        case XML_ERR_FATAL:   os << "FATAL: "; break;
+        case XML_ERR_NONE: return;
+        default: return;
+    }
+    os << error->file << "," << error->line << ": " << error->message;
+    errors->push_back(os.str());
+};
+
 inline void validate(
     const config_data_t& data)
 {
-    auto xml_error =
-        [] (void* userData, xmlErrorPtr error)
-        {
-            auto* errors = reinterpret_cast<std::vector<std::string>*>(userData);
-            if (!errors)
-            {
-                return;
-            }
-            std::ostringstream os;
-            switch (error->level)
-            {
-                case XML_ERR_WARNING: os << "WARN: ";  break;
-                case XML_ERR_ERROR:   os << "ERROR: "; break;
-                case XML_ERR_FATAL:   os << "FATAL: "; break;
-                case XML_ERR_NONE: return;
-                default: return;
-            }
-            os << error->file << "," << error->line << ": " << error->message;
-            errors->push_back(os.str());
-        };
-
-{#-
     xmlDocPtr doc{nullptr};
-    xmlSchemaPtr schema{nullptr};
     xmlSchemaParserCtxtPtr parserCtx{nullptr};
+    xmlSchemaPtr schema{nullptr};
     xmlSchemaValidCtxtPtr validCtx{nullptr};
-#}
+
     try
     {
-        constexpr const char* name = "memory.xsd"
+        constexpr const char* name{"{{ info.title | default('config') | replace('-', '_') }}.xsd"};
 
-        auto doc = std::unique_ptr<>(xmlReadMemory(buffer, size, name, nullptr, 0), xmlFreeDoc);
+        const char* buffer{nullptr};
+        size_t size{0};
+
+        get_schema_data(buffer, size);
+
+        doc = xmlReadMemory(buffer, size, name, nullptr, 0);
         if (!doc)
         {
             throw std::runtime_error("could not load embedded schema");
         }
 
-        auto parserCtx = std::unique_ptr<>(xmlSchemaNewDocParserCtxt(*doc), xmlSchemaFreeParserCtxt);
+        parserCtx = xmlSchemaNewDocParserCtxt(doc);
         if (!parserCtx)
         {
             throw std::runtime_error("could not create parser context");
         }
 
-        auto schema = std::unique_ptr<>(xmlSchemaParse(*parserCtx), xmlSchemaFree);
+        schema = xmlSchemaParse(parserCtx);
         if (!schema)
         {
             throw std::runtime_error("could not create schema parser");
         }
 
-        auto validCtx = std::unqiue_ptr<>(mlSchemaNewValidCtxt(schema), xmlSchemaFreeValidCtxt);
+        validCtx = xmlSchemaNewValidCtxt(schema);
         if (!validCtx)
         {
             throw std::runtime_error("could not create validation context");
@@ -118,8 +168,8 @@ inline void validate(
         xmlSchemaSetValidOptions(validCtx, XML_SCHEMA_VAL_VC_I_CREATE);
 
         std::vector<std::string> errors;
-        xmlSetStructuredErrorFunc(&errors, xml_error);
-        bool result = (xmlSchemaValidateDoc(validCtx, data.doc.get()) == 0);
+        xmlSetStructuredErrorFunc(&errors, xml_error_handler);
+        bool result = (xmlSchemaValidateDoc(validCtx, data.doc) == 0);
         xmlSetStructuredErrorFunc(nullptr, nullptr);
 
         if (!result)
@@ -131,30 +181,216 @@ inline void validate(
             }
             throw std::runtime_error(oss.str());
         }
+
+        xmlSchemaFreeValidCtxt(validCtx);
+        xmlSchemaFree(schema);
+        xmlSchemaFreeParserCtxt(parserCtx);
+        xmlFreeDoc(doc);
     }
     catch (const std::exception&)
     {
-    {#-
-        if (validCtx)
-        {
-            xmlSchemaFreeValidCtxt(validCtx);
-        }
-        if (schema)
-        {
-            xmlSchemaFree(schema);
-        }
-        if (parserCtx)
-        {
-            xmlSchemaFreeParserCtxt(parserCtx);
-        }
-        if (doc)
-        {
-            xmlFreeDoc(doc);
-        }
-    #}
+        xmlSchemaFreeValidCtxt(validCtx);
+        xmlSchemaFree(schema);
+        xmlSchemaFreeParserCtxt(parserCtx);
+        xmlFreeDoc(doc);
         throw;
     }
 }
 {% endif %}
 
+inline xmlNodePtr get_child(
+    xmlNodePtr parent,
+    const char* name)
+{
+    for (auto node = xmlFirstElementChild(parent); node; node = xmlNextElementSibling(node))
+    {
+        if (xmlStrcmp(node->name, BAD_CAST name) == 0)
+        {
+            return node;
+        }
+    }
+    return nullptr;
+}
+
+inline bool contains_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (!data.node)
+    {
+        return false;
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (xmlHasProp(data.node, BAD_CAST key))
+        {
+            return true;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (get_child(data.node, key))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+inline config_data_t get_key(
+    const config_data_t& data,
+    const char* key,
+    config_options opts)
+{
+    if (!data.node)
+    {
+        std::ostringstream msg;
+        msg << "invalid node for key '" << key << "'";
+        throw std::runtime_error(msg.str());
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        auto prop = xmlGetProp(data.node, BAD_CAST key);
+        if (prop)
+        {
+            return {prop};
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        auto child = get_child(data.node, key);
+        if (child)
+        {
+            return {child};
+        }
+    }
+
+    std::ostringstream msg;
+    msg << "element/attribute '" << key << "' does not exist in '" << data.node->name << "'";
+    throw std::runtime_error(msg.str());
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    config_options opts)
+{
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (data.prop)
+        {
+            const auto* content = reinterpret_cast<const char*>(data.prop);
+            value = config::from_string<T>(content);
+            return;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node)
+        {
+            const auto* content = reinterpret_cast<const char*>(xmlNodeGetContent(data.node));
+            value = config::from_string<T>(content);
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    T& value,
+    int base,
+    config_options opts)
+{
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    {
+        if (data.prop)
+        {
+            const auto* content = reinterpret_cast<const char*>(data.prop);
+            value = config::from_string<T>(content, base);
+            return;
+        }
+    }
+
+    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    {
+        if (data.node)
+        {
+            const auto* content = reinterpret_cast<const char*>(xmlNodeGetContent(data.node));
+            value = config::from_string<T>(content, base);
+            return;
+        }
+    }
+}
+
+template<typename T>
+inline void from_data(
+    const T& data,
+    T& value,
+    [[maybe_unused]] config_options opts)
+{
+    value = data;
+}
+
+template<typename T>
+inline void from_data(
+    const config_data_t& data,
+    std::vector<T>& value,
+    config_options opts)
+{
+    if (data.node)
+    {
+        for (auto node = xmlFirstElementChild(data.node); node; node = xmlNextElementSibling(node))
+        {
+            if (opts.elementName == nullptr || xmlStrcmp(node->name, BAD_CAST opts.elementName) == 0)
+            {
+                T tmp;
+                from_data({node}, tmp, opts);
+                value.push_back(tmp);
+            }
+        }
+    }
+}
+
+template<typename K, typename V>
+inline void from_data(
+    const config_data_t& data,
+    std::map<K,V>& value,
+    config_options opts)
+{
+    if (data.node)
+    {
+        for (auto node = xmlFirstElementChild(data.node); node; node = xmlNextElementSibling(node))
+        {
+            if (opts.elementName == nullptr || xmlStrcmp(node->name, BAD_CAST opts.elementName) == 0)
+            {
+                auto child_key = get_child(node, "key");
+                if (child_key == nullptr)
+                {
+                    throw std::runtime_error("dictionary entry contains no key"); // todo
+                }
+                K key;
+                from_data({child_key}, key, opts);
+
+                auto child_value = get_child(node, "value");
+                if (child_value == nullptr)
+                {
+                    throw std::runtime_error("dictionary entry contains no value"); // todo
+                }
+                V val;
+                from_data({child_value}, val, opts);
+
+                value.insert(std::make_pair(key, val));
+            }
+        }
+    }
+}
 {% endblock %}
