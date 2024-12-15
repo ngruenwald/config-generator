@@ -14,6 +14,10 @@
 {%- endfor -%}
 {%- endmacro -%}
 
+{#-
+  Renders a load function
+  @param type The type to create a load function for [object]
+-#}
 {%- macro load_function(type) -%}
 static void from_data(
     const config_data_t& data,
@@ -63,6 +67,11 @@ static void from_data(
 {%- endfor -%}
 {%- endif -%}
 {%- endmacro -%}
+
+{#-
+  Renders a print function
+  @param type The type to create a print function for
+-#}
 {%- macro print_function(type) -%}
 template<>
 void print<{{ m.type_case(type.name) }}>(
@@ -80,11 +89,23 @@ void print<{{ m.type_case(type.name) }}>(
 {%- endfilter %}
 }
 {%- endmacro -%}
+
+{#-
+  Create the print calls for object fields
+  @param prefix The field name prefix [string]
+  @param fields The fields to process [list of objects]
+-#}
 {%- macro print_fields(prefix, fields) -%}
 {% for field in fields %}
 {{ print_field(prefix, field) }}
 {%- endfor -%}
 {%- endmacro -%}
+
+{#-
+  Creates the print function for the given field
+  @param prefix The field name prefix [string]
+  @param field The field to process [object]
+-#}
 {%- macro print_field(prefix, field) -%}
 {%- if field.type.type in ['object'] %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}: ");
 {%- elif field.type.type in ['array'] %}print(os, {{ prefix }}{{ m.value_case(field.name) }}, indentLevel + 2, "{{ field.name }}");
@@ -95,6 +116,65 @@ void print<{{ m.type_case(type.name) }}>(
     {%- endif -%}
 {%- endif -%}
 {%- endmacro -%}
+
+{#-
+  Renders a list of process functions
+  @param types         List of types [objects]
+  @param unique_types  List of unique type names [strings]
+-#}
+{%- macro process_functions(types, unique_types) -%}
+{%- if types -%}
+{%- for type in types -%}
+{%- if type.type == 'object' and type.name in unique_types %}
+{{ process_function(type) }}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{#-
+  Renders a process function
+  @param type The type to process (object)
+-#}
+{%- macro process_function(type) -%}
+template<>
+void process<{{ m.type_case(type.name) }}>(
+    const std::vector<std::string>& name,
+    {{ m.type_case(type.name) }}& config,
+    post_process_fn_t& fn
+  {%- for pp_arg in opt.post_process_args %},
+    {{ pp_arg.type }} {{ pp_arg.name }}
+  {%- endfor %})
+{
+{%- filter indent(4) -%}
+{{ process_fields(type.name, 'config.', type.fields) }}
+{%- endfilter %}
+}
+{%- endmacro -%}
+
+{#-
+  Renders the process calls for a list of fields
+  @param name The name of the field [string]
+  @param prefix The variable prefix [string]
+  @param fields Fields to process [list of objects]
+-#}
+{%- macro process_fields(name, prefix, fields) -%}
+{% for field in fields %}
+{{ process_field(name, prefix, field) }}
+{%- endfor -%}
+{%- endmacro -%}
+
+{#-
+  Renders the process call for a field
+  @param name The name of the field [string]
+  @param prefix The variable prefix [string]
+  @param field The field to process [object]
+-#}
+{%- macro process_field(name, prefix, field) -%}
+process(concat_name(name, "{{ field.name }}"), {{ prefix }}{{ m.value_case(field.name) }}, fn
+    {%- for pp_arg in opt.post_process_args %}, {{ pp_arg.name }}{% endfor %});
+{%- endmacro -%}
+
 
 // This file has been generated. Do not modify.
 
@@ -401,6 +481,50 @@ void print(
 {% endif -%}
 {%- endif %}
 
+{% if opt.use_post_process -%}
+inline std::vector<std::string> concat_name(
+    std::vector<std::string> a,
+    const std::string& b)
+{
+    a.push_back(b);
+    return a;
+}
+
+template<typename T>
+void process(
+    const std::vector<std::string>& name,
+    T& config,
+    post_process_fn_t& fn
+  {%- for pp_arg in opt.post_process_args %},
+    {{ pp_arg.type }} {{ pp_arg.name }}
+  {%- endfor %})
+{
+    post_process_types_t var;
+    var = &config;
+    fn(name, var {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %});
+}
+
+{%- if opt.use_optional %}
+
+template<typename T>
+void process(
+    const std::vector<std::string>& name,
+    std::optional<T>& config,
+    post_process_fn_t& fn
+  {%- for pp_arg in opt.post_process_args %},
+    {{ pp_arg.type }} {{ pp_arg.name }}
+  {%- endfor %})
+{
+    if (!config)
+    {
+        return;
+    }
+    process(name, config.value(), fn {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %});
+}
+
+{% endif %}
+{%- endif %}
+
 //
 // custom
 //
@@ -417,6 +541,14 @@ void print(
 {%- endif -%}
 {%- if elements -%}
 {{ print_functions(elements, unique_elements) }}
+{%- endif %}
+{% if opt.use_post_process -%}
+{%- if types -%}
+{{ process_functions(types, unique_types) }}
+{%- endif -%}
+{%- if elements -%}
+{{ process_functions(elements, unique_elements) }}
+{%- endif %}
 {%- endif %}
 
 std::ostream& operator<<(
@@ -487,6 +619,22 @@ bool ValidateConfig(
     }
 
     return false;
+}
+{%- endif %}
+
+{%- if opt.use_post_process %}
+
+void PostProcessConfig(
+    Config& config,
+    post_process_fn_t fn
+{%- for pp_arg in opt.post_process_args %},
+    {{ pp_arg.type }} {{ pp_arg.name }}
+{%- endfor %})
+{
+    auto name = std::vector<std::string>{"config"};
+    {%- filter indent(4) -%}
+    {{ process_fields("config", 'config.', config.fields) }}
+    {%- endfilter %}
 }
 {%- endif %}
 {% for namespace in opt.namespaces %}

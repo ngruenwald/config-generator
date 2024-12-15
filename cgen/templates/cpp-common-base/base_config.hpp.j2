@@ -214,6 +214,9 @@ struct {{ m.type_case(type.name) }}
 #pragma once
 
 #include <cstdint>
+{% if opt.use_post_process -%}
+#include <functional>
+{%- endif %}
 {% if opt.use_validate -%}
 #include <iostream>
 {%- endif %}
@@ -226,6 +229,9 @@ struct {{ m.type_case(type.name) }}
 #include <sstream>
 {%- endif %}
 #include <string>
+{% if opt.use_post_process -%}
+#include <variant>
+{%- endif %}
 #include <vector>
 
 #include "enums.hpp"
@@ -256,6 +262,43 @@ std::unique_ptr<Config> LoadConfig(
 bool ValidateConfig(
     const std::string& configPath,
     std::ostream& os = std::cerr);
+{% endif -%}
+{% if opt.use_post_process %}
+/// Possible types
+typedef std::variant<
+    int*, unsigned int*, bool*, float*, double*,
+{%- for type in types -%}
+  {%- if type.name in unique_types -%}
+    {%- if type.type in ["array", "dict", "enum", "object"] %}
+    {{ m.type_case(type.name) }}*,
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor %}
+    std::string*
+> post_process_types_t;
+
+/// Post process callback function
+typedef std::function<
+    void(
+        const std::vector<std::string>& key,
+        post_process_types_t& value
+        {%- for arg in opt.post_process_args %},
+        {{ arg.type }}
+        {%- endfor %}
+    )
+> post_process_fn_t;
+
+/// Post process the configuration
+/// @param config Configuration structure
+{%- for pp_arg in opt.post_process_args %}
+/// @param {{ pp_arg.name }} User provided argument
+{%- endfor %}
+void PostProcessConfig(
+    Config& config,
+    post_process_fn_t fn
+  {%- for pp_arg in opt.post_process_args %},
+    {{ pp_arg.type }} {{ pp_arg.name }}
+  {%- endfor %});
 {% endif -%}
 
 {% for namespace in opt.namespaces %}

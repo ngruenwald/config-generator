@@ -8,6 +8,11 @@ options:
     use_optional: True
     use_printer: True
     # use_validate: True
+    post_process:
+      use: True
+      args:
+        - type: "const std::string&"
+          name: "foo"
 
 elements:
   types:
@@ -219,4 +224,3 @@ types:
         $ref: '#/types/oid'
     required:
       - base-oid
-

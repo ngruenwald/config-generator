@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-list(APPEND CMAKE_MODULE_PATH cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 project(test LANGUAGES CXX)
 
