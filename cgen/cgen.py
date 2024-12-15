@@ -107,6 +107,17 @@ def sort_types(types: List[Type]) -> List[Type]:
     return sorted_
 
 
+def filter_types(types: List[Type]) -> List[Type]:
+    names = {}
+    filtered = []
+    for type in types:
+        if type.name in names:
+            continue
+        names.update({type.name: 1})
+        filtered.append(type)
+    return filtered
+
+
 def load_types(types_dict: Dict, elem: str) -> List[Type]:
     types = []
     for key, value in types_dict[elem].items():
@@ -217,6 +228,7 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
 
         types = load_types(loader.data, 'types')
         types = sort_types(types)
+        types = filter_types(types)
         elements = load_types(loader.data, 'elements')
 
         constraints = load_constraints(loader.data)
