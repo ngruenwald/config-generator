@@ -269,7 +269,7 @@ typedef std::variant<
     int*, unsigned int*, bool*, float*, double*,
 {%- for type in types -%}
   {%- if type.name in unique_types -%}
-    {%- if type.type in ["array", "dict", "enum", "object"] %}
+    {%- if type.type in ["array", "dict", "enum"] %}
     {{ m.type_case(type.name) }}*,
     {%- endif -%}
   {%- endif -%}
