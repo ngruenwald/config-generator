@@ -1,3 +1,10 @@
+{%- macro get_column_width(column, default) -%}
+{%-   if options['svg']['columns'][column]['width']  -%}{{ options['svg']['columns'][column]['width'] }}
+{%- elif options['svg']['columns'][column]['length'] -%}{{ (options['svg']['columns'][column]['length'] | int + 1) * 5 }}
+{%- else -%}{{ default }}
+{%- endif -%}
+{%- endmacro -%}
+
 {%- set global_vars = namespace(
       uniquifier = 0,
       object_color_index = 0,
@@ -16,19 +23,40 @@
       ],
       font_color = '#000000',
       border_color = '#000000',
-      border_width = 1.0,
+      border_width = 0.5,
       indent = 5,
-      image_width = 800,
       line_height = 12,
-      bold_font = 'font-size:8px;line-height:1.25;font-family:Verdana;font-weight:bold',
-      normal_font = 'font-size:8px;line-height:1.25;font-family:Verdana;font-weight:normal',
+      bold_font = 'font-size:8px;line-height:1.25;font-family:Courier New;font-weight:bold',
+      normal_font = 'font-size:8px;line-height:1.25;font-family:Courier New;font-weight:normal',
       array_color = '#dfdfdf',
       dict_color = '#dfdfdf',
       enum_color = '#dfdfdf',
       simple_color = '#f0f0f0',
-      compact_enum = True
+      compact_enum = options['svg']['compact_enum'] | default(True),
+      xml = options['svg']['xml'] | default(False),
+      col_name_width = get_column_width('title', 150),
+      col_type_width = get_column_width('type', 150),
+      col_default_width = get_column_width('default', 150),
+      col_usage_width = get_column_width('usage', 20),
+      col_description_width = get_column_width('description', 150),
+      col_name_length = options['svg']['columns']['title']['length'] | default(0),
+      col_type_length = options['svg']['columns']['type']['length'] | default(0),
+      col_default_length = options['svg']['columns']['default']['length'] | default(0),
+      col_usage_length = options['svg']['columns']['usage']['length'] | default(0),
+      col_description_length = options['svg']['columns']['description']['length'] | default(0),
+      image_width = options['svg']['image']['width'] | default(0),
     )
 -%}
+
+{%- if global_vars.image_width == 0 -%}
+  {%- set global_vars.image_width =
+        global_vars.col_name_width | int +
+        global_vars.col_type_width | int +
+        global_vars.col_default_width | int +
+        global_vars.col_usage_width | int +
+        global_vars.col_description_width | int
+  -%}
+{%- endif -%}
 
 {#-
   Format the name of a field type
@@ -37,11 +65,54 @@
   @returns the formatted type name
 -#}
 {%- macro format_type_name(field) -%}
-{%-   if field.type.type == 'array'  -%} {{ '[…]' }}
+{%-   if field.type.type == 'array'  -%}
+  {{ '[…]' }}
+  {%-   if field.type.minsize and field.type.maxsize %}  ({{ field.type.minsize }}..{{ field.type.maxsize }})
+  {%- elif field.type.minsize %}  ({{ field.type.minsize }}..*)
+  {%- elif field.type.maxsize %}  (0..{{ field.type.maxsize }})
+  {%- else %} {#- (0..*) -#}
+  {%- endif -%}
 {%- elif field.type.type == 'dict'   -%} {{ '{ : }' }}
 {%- elif field.type.type == 'enum'   -%} {{ field.type.name + ' [' + field.type.base_type + ']' }}
-{%- elif field.type.type == 'object' -%} {{ ''   }}
-{%- else                             -%} {{ field.type.type }}
+{%- elif field.type.type == 'object' -%} {{ '' }}
+
+{%- elif field.type.type in ['int', 'uint', 'float'] -%} {#- NOTE: float has no base -#}
+  {{ field.type.type }}
+  {%-   if field.type.minv and field.type.maxv %} ({{ field.type.minv }}..{{ field.type.maxv }})
+  {%- elif field.type.minv %} (≥ {{ field.type.minv }})
+  {%- elif field.type.maxv %} (≥ {{ field.type.maxv }})
+  {%- endif -%}
+  {%- if field.type.base | default(10) != 10 -%}
+    {%-   if field.type.base == 2  %} [bin]
+    {%- elif field.type.base == 8  %} [oct]
+    {%- elif field.type.base == 16 %} [hex]
+    {%- else %} [base {{ field.type.base }}]
+    {%- endif -%}
+  {%- endif -%}
+{%- elif field.type.type in ['string'] -%}
+  {{ field.type.type }}
+  {%-   if field.type.min and field.type.max %} ({{ field.type.min }} ≥ len ≤ {{ field.type.max }})
+  {%- elif field.type.min %} (len ≥ {{ field.type.min }})
+  {%- elif field.type.max %} (len ≤ {{ field.type.max }})
+  {%- endif -%}
+{%- else -%} {{ field.type.type }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro format_default(field) -%}
+{#-
+  {%- if not field.type.default -%}
+  {%- elif field.type.type in ['int', 'uint', 'float'] -%} {{ field.type.default }}
+  {%- elif field.type.type in ['bool'] %} {{ field.type.default }}
+  {%- elif field.type.type in%}
+-#}
+{%- if field.type.default %}{{ field.type.default }}{% endif -%}
+{%- endmacro -%}
+
+{%- macro limit_string(text, len) -%}
+{%- if len == 0 -%}{{ text }}
+{%- elif text | length <= len -%}{{ text }}
+{%- else %}{{ text[0:len] }}…
 {%- endif -%}
 {%- endmacro -%}
 
@@ -56,14 +127,14 @@
 -#}
 {%- macro create_opts(field, vars, opts_in, indent) -%}
 {%- set opts = {
-      'x': vars['x'] + indent,
+      'x': vars['x'] + indent | int,
       'y': vars['y'],
       'xo': 0,
       'yo': 0,
       'indent': indent if indent else global_vars.indent,
       'line_height': global_vars.line_height,
       'box': {
-        'width': opts_in['box']['width'] - indent,
+        'width': opts_in['box']['width'] | int - indent,
         'height': get_box_height(opts_in, field, field.name),
         'color': get_box_color_ex(field),
         'border_color': global_vars.border_color,
@@ -72,28 +143,33 @@
       'columns': [
         {
           'name': opts_in['columns'][0]['name'],
-          'width': opts_in['columns'][0]['width'] - indent,
-          'text': field.name | default('')
+          'width': opts_in['columns'][0]['width'] | int - indent,
+          'text': limit_string(field.name | default(''), opts_in['columns'][0]['length'] | default(0)),
+          'length': opts_in['columns'][0]['length'] | default(0)
         },
         {
           'name': opts_in['columns'][1]['name'],
           'width': opts_in['columns'][1]['width'],
-          'text': format_type_name(field)
+          'text': limit_string(format_type_name(field), opts_in['columns'][1]['length'] | default(0)),
+          'length': opts_in['columns'][1]['length'] | default(0)
         },
         {
           'name': opts_in['columns'][2]['name'],
           'width': opts_in['columns'][2]['width'],
-          'text': '*' if field.type.type in ['array', 'dict'] else ''
+          'text': limit_string(format_default(field), opts_in['columns'][2]['length'] | default(0)),
+          'length': opts_in['columns'][2]['length'] | default(0)
         },
         {
           'name': opts_in['columns'][3]['name'],
           'width': opts_in['columns'][3]['width'],
-          'text': '' if field.required is none else ('M' if field.required else 'O')
+          'text': '' if field.required is none else ('M' if field.required else 'O'),
+          'length': opts_in['columns'][3]['length'] | default(0)
         },
         {
           'name': opts_in['columns'][4]['name'],
           'width': opts_in['columns'][4]['width'],
-          'text': field.description | default('')
+          'text': limit_string(field.description | default(''), opts_in['columns'][4]['length'] | default(0)),
+          'length': opts_in['columns'][4]['length'] | default(0)
         }
       ]
     }
@@ -115,9 +191,9 @@
 {%- endmacro -%}
 
 {%- macro get_box_color_ex(field) -%}
-  {%-   if field.type.type == 'array'  -%} {{ global_vars.array_color }}
-  {%- elif field.type.type == 'dict'   -%} {{ global_vars.dict_color }}
-  {%- elif field.type.type == 'enum'   -%} {{ global_vars.enum_color }}
+  {%-   if field.type.type == 'array'  -%} {{ global_vars.array_color | default(get_box_color()) }}
+  {%- elif field.type.type == 'dict'   -%} {{ global_vars.dict_color | default(get_box_color()) }}
+  {%- elif field.type.type == 'enum'   -%} {{ global_vars.enum_color | default(get_box_color()) }}
   {%- elif field.type.type == 'object' -%} {{ get_box_color() }}
   {%- else                             -%} {{ global_vars.simple_color }}
   {%- endif -%}
@@ -154,7 +230,7 @@
   {%- set vars = { 'offset': (offset + index + 1) } -%}
   {%- for column in opts.columns -%}
     {%- if loop.index0 < index -%}
-      {%- if vars.update({'offset': (vars['offset'] + column.width)}) %}{% endif -%}
+      {%- if vars.update({'offset': (vars['offset'] + column.width | int)}) %}{% endif -%}
     {%- endif -%}
   {%- endfor -%}
 {{ vars['offset'] }}
@@ -166,7 +242,8 @@
   @param text input text
 -#}
 {%- macro sanitize_text(text) -%}
-{{ text | replace('&', '&amp;') | replace('<', '&lt;') | replace('>', '&gt;') | replace('\'', '&apos;') }}
+{#- {{ text | replace('&', '&amp;') | replace('<', '&lt;') | replace('>', '&gt;') | replace('\'', '&apos;') }} -#}
+{{ text | escape }}
 {%- endmacro -%}
 
 {#-
@@ -189,9 +266,12 @@
 {%- macro get_box_height_array(field, opts, vars, trace_id) -%}
   {%- if field.type.item_type.type in ['array', 'dict', 'object'] -%}
     {%- set field_item = {'type': field.type.item_type} -%}
-    {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, field_item, trace_id) | int}) -%}
+    {%- set _ = vars.update({'h': vars['h'] | int + get_box_height(opts, field_item, trace_id) | int}) -%}
   {%- else -%}
-    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+    {%- set _ = vars.update({'h': vars['h'] | int + opts.line_height | int}) -%}
+  {%- endif -%}
+  {%- if global_vars.xml -%}
+    {%- set _ = vars.update({'h': vars['h'] | int - opts.line_height | int}) -%}
   {%- endif -%}
 {%- endmacro -%}
 
@@ -200,22 +280,22 @@
     {%- set field_key = {'type': field.type.key_type} -%}
     {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, field_key, trace_id) | int}) -%}
   {%- else -%}
-    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height | int}) -%}
   {%- endif -%}
   {%- if field.type.value_type.type in ['array', 'dict', 'object'] -%}
     {%- set field_value = {'type': field.type.value_type}%}
     {%- set _ = vars.update({'h': vars['h'] + get_box_height(opts, field_value, trace_id) | int}) -%}
   {%- else -%}
-    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height | int}) -%}
   {%- endif -%}
 {%- endmacro -%}
 
 {%- macro get_box_height_enum(field, opts, vars, trace_id) -%}
   {%- if global_vars.compact_enum -%}
-    {%- set _ = vars.update({'h': vars['h'] + opts.line_height}) -%}
+    {%- set _ = vars.update({'h': vars['h'] + opts.line_height | int}) -%}
   {%- else -%}
     {%- set enum_count = field.type.enum | length %}
-    {%- set _ = vars.update({'h': vars['h'] + (opts.line_height * (enum_count if enum_count else 1))}) -%}
+    {%- set _ = vars.update({'h': vars['h'] + (opts.line_height * (enum_count if enum_count else 1)) | int}) -%}
   {%- endif -%}
 {%- endmacro -%}
 
@@ -235,6 +315,9 @@
 {%- set vars = {'x': opts.x, 'y': opts.y} %}
 <g id="{{ create_id([elm.name, 'element']) }}">
 {% filter indent(2) %}
+{%- if opts['no_box'] | default(False) -%}
+  {#- undo indent -#}
+{%- else -%}
 <rect
   x="{{ vars['x'] }}"
   y="{{ vars['y'] }}"
@@ -246,6 +329,7 @@
 {% for column in opts.columns -%}
 {{ render_textblock(elm, opts, column, loop.index0) }}
 {% endfor -%}
+{%- endif -%}
 
 {%-   if elm.type.type == 'array'  -%} {{ render_element_array(elm, vars, opts) }}
 {%- elif elm.type.type == 'dict'   -%} {{ render_element_dict(elm, vars, opts) }}
@@ -278,7 +362,7 @@
     style="fill:#00ff00"
     /> -#}
 <text
-  x="{{ offset_x(opts, opts.x + opts.indent, index) }}"
+  x="{{ offset_x(opts, opts.x + opts.indent | int + opts.text_indent | default(0) | int, index) }}"
   y="{{ opts.y + 8 }}"
   id="{{ create_id([elm.name, column.name, 'text']) }}"
   fill="{{ opts.font_color | default(global_vars.font_color) }}"
@@ -300,16 +384,20 @@
 
 {%- macro render_element_array(elm, vars, opts) -%}
   {%- set field_item = {'name': elm.type.item_name, 'type': elm.type.item_type, 'required': None} -%}
-  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'item' box #}{%- endif -%}
+  {%- if global_vars.xml -%}
+    {%- if vars.update({'no_box': True}) -%}{%- endif -%}
+  {%- else -%}
+    {%- if vars.update({'y': (vars['y'] + opts.line_height | int)}) -%}{# insert 'item' box #}{%- endif -%}
+  {%- endif -%}
 {{ render_field(elm, field_item, vars, opts) }}
 {%- endmacro -%}
 
 {%- macro render_element_dict(elm, vars, opts) -%}
   {%- set field_key = {'name': 'key', 'type': elm.type.key_type, 'required': True} -%}
-  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'key' box #}{%- endif -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height | int)}) -%}{# insert 'key' box #}{%- endif -%}
 {{ render_field(elm, field_key, vars, opts) }}
   {%- set field_value = {'name': 'value', 'type': elm.type.value_type, 'required': True} -%}
-  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{# insert 'value' box #}{%- endif -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height | int)}) -%}{# insert 'value' box #}{%- endif -%}
 {{ render_field(elm, field_value, vars, opts) }}
 {%- endmacro -%}
 
@@ -323,12 +411,12 @@
     {%- endif -%}
   {%- endfor -%}
   {%- set field_enum = {'name': ve['enumerations'], 'type': '', 'description': '', 'required': None} -%}
-  {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{%- endif -%}
+  {%- if vars.update({'y': (vars['y'] + opts.line_height | int)}) -%}{%- endif -%}
 {{ render_field(elm, field_enum, vars, opts) }}
 {%- else -%}
   {% for enum in elm.type.enum %}
     {%- set field_enum = {'name': enum, 'type': '', 'description': '', 'required': None} -%}
-    {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{%- endif -%}
+    {%- if vars.update({'y': (vars['y'] + opts.line_height | int)}) -%}{%- endif -%}
 {{ render_field(elm, field_enum, vars, opts) }}
   {% endfor %}
 {%- endif -%}
@@ -336,7 +424,7 @@
 
 {%- macro render_element_object(elm, vars, opts) -%}
   {% for field in elm.type.fields %}
-    {%- if vars.update({'y': (vars['y'] + opts.line_height)}) -%}{%- endif -%}
+    {%- if vars.update({'y': (vars['y'] + opts.line_height | int)}) -%}{%- endif -%}
     {{ render_field(elm, field, vars, opts) }}
   {% endfor %}
 {%- endmacro -%}
@@ -408,6 +496,7 @@
 -#}
 {%- macro render_field_object(parent, opts, field, vars) -%}
 {%- set fopts = create_opts(field, vars, opts, opts['indent'] | default(global_vars.indent)) | to_dict -%}
+{%- set _ = fopts.update({'no_box': vars['no_box'] | default(False)}) -%}
 <g id="{{ create_id([parent.name, field.name, 'element']) }}">
 {%- filter indent(2) -%}
 {{ render_element(field, fopts) }}
@@ -463,6 +552,7 @@
     'xo': 0,
     'yo': 0,
     'indent': 0,
+    'text_indent': global_vars.indent,
     'box': {
       'width': global_vars.image_width,
       'height': 0,
@@ -471,18 +561,18 @@
       'border_width': global_vars.border_width,
     },
     'columns': [
-      { 'name': 'title',       'width': 150, 'text': 'Element' },
-      { 'name': 'type',        'width': 150, 'text': 'Type' },
-      { 'name': 'unknown',     'width':  30, 'text': '' },
-      { 'name': 'usage',       'width':  15, 'text': '' },
-      { 'name': 'description', 'width': 150, 'text': 'Description' },
+      { 'name': 'title',       'width': global_vars.col_name_width | default(150), 'text': 'Element', 'length': global_vars.col_name_length | default(0) },
+      { 'name': 'type',        'width': global_vars.col_type_width | default(150), 'text': 'Type', 'length': global_vars.col_type_length | default(0) },
+      { 'name': 'unknown',     'width': global_vars.col_default_width | default(100), 'text': 'Default', 'length': global_vars.col_default_length | default(0) },
+      { 'name': 'usage',       'width': global_vars.col_usage_width | default(20), 'text': 'Use', 'length': global_vars.col_usage_length | default(0) },
+      { 'name': 'description', 'width': global_vars.col_description_width | default(150), 'text': 'Description', 'length': global_vars.col_description_length | default(0) },
     ],
     'line_height': global_vars.line_height,
     'font': global_vars.bold_font
   }
   -%}
 
-  {%- set _ = opts['box'].update({'height': get_box_height(opts, element, '42')}) -%}
+  {%- set _ = opts['box'].update({'height': get_box_height(opts, element, '42') | int + opts.line_height | int}) -%}
 
   {{- render_element(element, opts) -}}
 
