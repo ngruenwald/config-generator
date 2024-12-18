@@ -274,6 +274,9 @@ typedef std::variant<
     {%- endif -%}
   {%- endif -%}
 {%- endfor %}
+{%- for type in options["cpp"]["post_process"]["variant_types"] | default([]) %} {#- TODO: fugly workaround -> get rid off #}
+  {{ type }}*,
+{%- endfor %}
     std::string*
 > post_process_types_t;
 
