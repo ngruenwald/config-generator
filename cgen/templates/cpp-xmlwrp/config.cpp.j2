@@ -46,6 +46,7 @@ struct config_options
 
 constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
 constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
+constexpr const unsigned long FLAG_XML_WRAPPED = 0x04;
 
 struct XmlWrpData
 {
@@ -93,7 +94,9 @@ inline bool contains_key(
 {
     if (data.node.has_value())
     {
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+        if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
         {
             if (data.node.value().HasProp(key))
             {
@@ -101,7 +104,7 @@ inline bool contains_key(
             }
         }
 
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        if (flags == 0 || flags & FLAG_XML_ELEMENT)
         {
             try
             {
@@ -125,7 +128,9 @@ inline config_data_t get_key(
 {
     if (data.node.has_value())
     {
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+        if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
         {
             try
             {
@@ -136,7 +141,7 @@ inline config_data_t get_key(
             }
         }
 
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        if (flags == 0 || flags & FLAG_XML_ELEMENT)
         {
             try
             {
@@ -163,7 +168,9 @@ inline void from_data(
     T& value,
     config_options opts)
 {
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (data.prop.has_value())
         {
@@ -172,7 +179,7 @@ inline void from_data(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (data.node.has_value())
         {
@@ -189,7 +196,9 @@ inline void from_data(
     int base,
     config_options opts)
 {
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (data.prop.has_value())
         {
@@ -198,7 +207,7 @@ inline void from_data(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (data.node.has_value())
         {
@@ -252,6 +261,38 @@ inline void from_data(
             from_data(XmlWrpData{data.doc, child.GetChild("value")}, val, opts);
             value.insert(std::make_pair(key, val));
         }
+    }
+}
+
+template<typename T>
+inline void get_mandatory_element(
+    const config_data_t& data,
+    const char* name,
+    std::vector<T>& value,
+    config_options opts)
+{
+    try
+    {
+        if (opts.flags & FLAG_XML_WRAPPED)
+        {
+            from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+        }
+        else
+        {
+            const auto children = data.node.value().GetChildren(name);
+            for (const auto& child : children)
+            {
+                T tmp;
+                from_data(XmlWrpData{data.doc, child}, tmp {{- m.insert_fd_opts() -}});
+                value.push_back(tmp);
+            }
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        std::ostringstream oss;
+        oss << "failed to retrieve element '" << name << "': " << ex.what();
+        throw std::runtime_error(oss.str());
     }
 }
 {% endblock %}

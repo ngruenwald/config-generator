@@ -4,12 +4,13 @@ from .doc import DocEntry
 
 
 class Type:
-    def __init__(self, name: str, type_: str, description: str):
+    def __init__(self, name: str, type_: str, description: str, xml: dict):
         self.name = name
         self.type = type_
         self.description = description
         self.alias = name
         self.constraints = []
+        self.xml = xml if xml else {}
 
     def __str__(self):
         return f'Type{{name={self.name},type={self.type},alias={self.alias},constraints={self.constraints}}}'
@@ -18,8 +19,9 @@ class Type:
 class IntegerType(Type):
     def __init__(self, name: str, type_: str, description: str = None,
                  base: int = None, defv: str = None,
-                 minv: str = None, maxv: str = None):
-        super().__init__(name, type_, description)
+                 minv: str = None, maxv: str = None,
+                 xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.base = base if base else 10
         self.default = defv
         self.min = minv
@@ -37,14 +39,16 @@ class IntegerType(Type):
             defv=props.get('default', None),
             base=props.get('base', 10),
             minv=props.get('min', None),
-            maxv=props.get('max', None)
+            maxv=props.get('max', None),
+            xml=props.get('xml', None)
         )
 
 
 class FloatingType(Type):
     def __init__(self, name: str, type_: str, description: str = None,
-                 defv: str = None, minv: str = None, maxv: str = None):
-        super().__init__(name, type_, description)
+                 defv: str = None, minv: str = None, maxv: str = None,
+                 xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.default = defv
         self.min = minv
         self.max = maxv
@@ -60,14 +64,15 @@ class FloatingType(Type):
             description=props.get('description', ''),
             defv=props.get('default', None),
             minv=props.get('min', None),
-            maxv=props.get('max', None)
+            maxv=props.get('max', None),
+            xml=props.get('xml', None)
         )
 
 
 class BooleanType(Type):
     def __init__(self, name: str, type_: str, description: str = None,
-                 defv: bool = None):
-        super().__init__(name, type_, description)
+                 defv: bool = None, xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.default = None
         if isinstance(defv, bool):
             self.default = defv
@@ -89,15 +94,17 @@ class BooleanType(Type):
             name=name,
             type_=ttype,
             description=props.get('description', ''),
-            defv=props.get('default', None)
+            defv=props.get('default', None),
+            xml=props.get('xml', None)
         )
 
 
 class StringType(Type):
     def __init__(self, name: str, type_: str, description: str = None,
                  defv: str = None, pattern: str = None,
-                 minl: int = None, maxl: int = None):
-        super().__init__(name, type_, description)
+                 minl: int = None, maxl: int = None,
+                 xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.default = defv
         self.pattern = pattern
         self.min = minl
@@ -115,14 +122,15 @@ class StringType(Type):
             defv=props.get('default', None),
             pattern=props.get('pattern', None),
             minl=props.get('min', None),
-            maxl=props.get('max', None)
+            maxl=props.get('max', None),
+            xml=props.get('xml', None)
         )
 
 
 class EnumType(Type):
     def __init__(self, name: str, type_: str, base_type: str, enum: List[str],
-                 description: str = None, defv: str = None):
-        super().__init__(name, type_, description)
+                 description: str = None, defv: str = None, xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.base_type = base_type
         self.enum = enum
         self.default = defv
@@ -138,7 +146,8 @@ class EnumType(Type):
             base_type=ttype,
             enum=props.get('enum', None),
             description=props.get('description', ''),
-            defv=props.get('default', None)
+            defv=props.get('default', None),
+            xml=props.get('xml', None)
         )
 
 
@@ -146,8 +155,9 @@ class ArrayType(Type):
     def __init__(self, name: str, type_: str, item_type: Type,
                  item_name: str, description: str = None,
                  defv: List[str] = None,
-                 mins: int = None, maxs: int = None):
-        super().__init__(name, type_, description)
+                 mins: int = None, maxs: int = None,
+                 xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.item_type = item_type
         self.item_name = item_name
         self.default = defv
@@ -175,7 +185,8 @@ class ArrayType(Type):
             description=props.get('description', ''),
             defv=props.get('default', None),
             mins=props.get('minItems', props.get('min', None)),
-            maxs=props.get('maxItems', props.get('max', None))
+            maxs=props.get('maxItems', props.get('max', None)),
+            xml=props.get('xml', None)
         )
 
     def doc(self, root) -> List[DocEntry]:
@@ -189,8 +200,9 @@ class ArrayType(Type):
 
 
 class DictionaryType(Type):
-    def __init__(self, name: str, type_: str, key_type: Type, value_type: Type, description: str = None, defv: Dict = None):
-        super().__init__(name, type_, description)
+    def __init__(self, name: str, type_: str, key_type: Type, value_type: Type,
+                 description: str = None, defv: Dict = None, xml: dict = None):
+        super().__init__(name, type_, description, xml)
         self.key_type = key_type
         self.value_type = value_type
         self.default = defv
@@ -223,7 +235,8 @@ class DictionaryType(Type):
             key_type=key_type,
             value_type=value_type,
             description=props.get('description', ''),
-            defv=props.get('default', None)
+            defv=props.get('default', None),
+            xml=props.get('xml', None)
         )
 
     def doc(self, root) -> List[DocEntry]:
@@ -264,9 +277,8 @@ class ObjectField:
 class ObjectType(Type):
     def __init__(self, name: str, type_: str, description: str = None,
                  fields: List[ObjectField] = None, xml: dict = None):
-        super().__init__(name, type_, description)
+        super().__init__(name, type_, description, xml)
         self.fields = fields
-        self.xml = xml if xml else dict()
 
     def __str__(self):
         return f'ObjectType{{name={self.name},type={self.type},alias={self.alias},fields={self.fields},xml={self.xml}}}'
@@ -275,7 +287,7 @@ class ObjectType(Type):
     def create(data: Dict, name: str, props: Dict, ttype: str):
         fields = []
         required_fields = props.get('required', [])
-        xml = props.get('xml', {})
+        xml = props.get('xml', None)
         if 'properties' in props:
             for pkey, pval in props['properties'].items():
                 pt = load_type(data, pkey, pval)
@@ -382,16 +394,19 @@ def load_ref_type(data: Dict, name: str, props: Dict) -> Type:
         t.default = props.get('default', t.default)
         t.min = props.get('min', t.min)
         t.max = props.get('max', t.max)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, FloatingType):
         t.description = props.get('description', t.description)
         t.default = props.get('default', t.default)
         t.min = props.get('min', t.min)
         t.max = props.get('max', t.max)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, BooleanType):
         t.description = props.get('description', t.description)
         t.default = props.get('default', t.default)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, StringType):
         t.description = props.get('description', t.description)
@@ -399,23 +414,28 @@ def load_ref_type(data: Dict, name: str, props: Dict) -> Type:
         t.pattern = props.get('pattern', t.pattern)
         t.min = props.get('min', t.min)
         t.max = props.get('max', t.max)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, EnumType):
         t.description = props.get('description', t.description)
         t.default = props.get('default', t.default)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, ArrayType):
         t.description = props.get('description', t.description)
         t.default = props.get('default', t.default)
         t.minsize = props.get('min', t.minsize)
         t.maxsize = props.get('max', t.maxsize)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, DictionaryType):
         t.description = props.get('description', t.description)
         t.default = props.get('default', t.default)
+        t.xml = props.get('xml', t.xml)
 
     if isinstance(t, ObjectType):
         t.description = props.get('description', t.description)
+        t.xml = props.get('xml', t.xml)
 
     return t
 

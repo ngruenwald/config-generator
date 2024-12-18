@@ -157,7 +157,13 @@ _
 {%- macro insert_opts(field) -%}
 {%- if opt.requires_opts -%}
 {%- if field.type.type in ['array'] -%}
-, {"{{ field.type.item_name | default('entry') }}"}
+, {
+{%- if field.type.xml['wrapped'] | default(True) -%}  {#- global default via options? -#}
+FLAG_XML_WRAPPED
+{%- else -%}
+0
+{%- endif -%}
+, "{{ field.type.item_name | default('entry') }}"}
 {%- else -%}
 , {}
 {%- endif -%}
