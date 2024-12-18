@@ -9,12 +9,13 @@
   >
 
   <types
-    am="-1" bm="-2" cm="-3"
+    bm="-2" cm="-3"
     dm="1" em="2"
     fm="asdf"
     gm="1.3" hm="3.141592653589793"
     im="true" jm="false"
   >
+    <am>-1</am>
     <km>
       <item>0</item>
       <item>1</item>

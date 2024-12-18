@@ -72,6 +72,8 @@ types:
       # mandatory
       am:
         type: int
+        xml:
+          attribute: False
       bm:
         type: integer
       cm:
