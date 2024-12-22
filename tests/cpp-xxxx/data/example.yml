@@ -42,3 +42,9 @@ an_enum: "foo"
 
 test42:
   base-oid: "E001"
+
+test43:
+  foo: 10
+  bar:
+    - baz: "aaa"
+    - baz: "aab"

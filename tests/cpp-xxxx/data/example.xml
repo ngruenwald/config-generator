@@ -85,4 +85,9 @@
 
   <test42 base-oid="E001" />
 
+  <test43 foo="10">
+    <bar baz="aaa" />
+    <bar baz="aab" />
+  </test43>
+
 </config>

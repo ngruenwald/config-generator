@@ -83,6 +83,11 @@ int main(int argc, char** argv)
 
     TEST(config->test42.base_oid == 0xe001);
 
+    TEST(config->test43.foo.value() == 10);
+    TEST(config->test43.bar.size() == 2);
+    TEST(config->test43.bar[0].baz.value() == "aaa");
+    TEST(config->test43.bar[1].baz.value() == "aab");
+
     std::cout << '\n' << *config << '\n';
 
 

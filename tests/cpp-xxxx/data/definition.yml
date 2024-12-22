@@ -13,6 +13,8 @@ options:
       args:
         - type: "const std::string&"
           name: "foo"
+      variant_types:
+        - "std::vector<Test43Bar>"
 
 elements:
   types:
@@ -63,6 +65,10 @@ elements:
 
   test42:
     $ref: '#/types/test42'
+    required: True
+
+  test43:
+    $ref: '#/types/test43'
     required: True
 
 types:
@@ -226,3 +232,24 @@ types:
         $ref: '#/types/oid'
     required:
       - base-oid
+
+  test43:
+    description: Test 43
+    type: object
+    properties:
+      foo:
+        type: int
+        xml:
+          attribute: True
+      bar:
+        type: array
+        items:
+          $ref: '#/types/test43_bar'
+        xml:
+          wrapped: False
+
+  test43_bar:
+    type: object
+    properties:
+      baz:
+        type: string

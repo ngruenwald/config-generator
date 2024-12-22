@@ -46,3 +46,12 @@ am = 2
 
 [test42]
 base-oid = "E001"
+
+[test43]
+foo = 10
+
+  [[test43.bar]]
+  baz = "aaa"
+
+  [[test43.bar]]
+  baz = "aab"
