@@ -99,13 +99,16 @@ def create_name(outer_name: list[str], types: List[Type], suffix: str | None = N
 def create_name2(type: Type, types: List[Type], merge_collection_types: bool) -> str:
     if isinstance(type, ArrayType):
         at: ArrayType = type
-        name: str = f"array_of_{at.item_type.type}"
+        iname: str = at.item_type.name if isinstance(at.item_type, ObjectType) else at.item_type.type
+        name: str = f"{iname}_array"
         if merge_collection_types:
             return name
         return create_name_with_opt_counter(name, types)
     if isinstance(type, DictionaryType):
         dt: DictionaryType = type
-        name: str = f"dict_of_{dt.key_type.type}_{dt.value_type.type}"
+        kname: str = dt.key_type.name if isinstance(dt.key_type, ObjectType) else dt.key_type.type
+        vname: str = dt.value_type.name if isinstance(dt.value_type, ObjectType) else dt.value_type.type
+        name: str = f"{kname}_{vname}_dict"
         if merge_collection_types:
             return name
         return create_name_with_opt_counter(name, types)
