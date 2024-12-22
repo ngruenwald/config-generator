@@ -24,7 +24,7 @@ struct config_options
 
 constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
 constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
-constexpr const unsigned long FLAG_XML_WRAPPED = 0x00; // currently not supported
+constexpr const unsigned long FLAG_XML_WRAPPED = 0x04;
 
 struct PugiData
 {
@@ -93,9 +93,11 @@ inline bool contains_key(
 {
     if (data.node.has_value())
     {
+        const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
         const auto& n = data.node.value();
 
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
         {
             const auto& attr = n.attribute(key);
             if (attr)
@@ -104,7 +106,7 @@ inline bool contains_key(
             }
         }
 
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        if (flags == 0 || flags & FLAG_XML_ELEMENT)
         {
             const auto& node = n.child(key);
             if (node)
@@ -124,9 +126,11 @@ inline config_data_t get_key(
 {
     if (data.node.has_value())
     {
+        const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
         const auto& n = data.node.value();
 
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+        if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
         {
             auto attr = n.attribute(key);
             if (attr)
@@ -135,7 +139,7 @@ inline config_data_t get_key(
             }
         }
 
-        if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+        if (flags == 0 || flags & FLAG_XML_ELEMENT)
         {
             auto node = n.child(key);
             if (node)
@@ -160,7 +164,9 @@ inline void from_data(
     T& value,
     config_options opts)
 {
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (data.attr.has_value())
         {
@@ -169,7 +175,7 @@ inline void from_data(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (data.node.has_value())
         {
@@ -186,7 +192,9 @@ inline void from_data(
     int base,
     config_options opts)
 {
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (data.attr.has_value())
         {
@@ -195,7 +203,7 @@ inline void from_data(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (data.node.has_value())
         {
@@ -249,6 +257,38 @@ inline void from_data(
             from_data(PugiData{data.doc, child.child("value")}, val, opts);
             value.insert(std::make_pair(key, val));
         }
+    }
+}
+
+template<typename T>
+inline void get_mandatory_element(
+    const config_data_t& data,
+    const char* name,
+    std::vector<T>& value,
+    config_options opts)
+{
+    try
+    {
+        if (opts.flags & FLAG_XML_WRAPPED)
+        {
+            from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+        }
+        else
+        {
+            const auto& n = data.node.value();
+            for (const auto& child : n.children(name))
+            {
+                T tmp;
+                from_data(PugiData{data.doc, child}, tmp {{- m.insert_fd_opts() -}});
+                value.push_back(tmp);
+            }
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        std::ostringstream oss;
+        oss << "failed to retrieve element '" << name << "': " << ex.what();
+        throw std::runtime_error(oss.str());
     }
 }
 {% endblock %}
