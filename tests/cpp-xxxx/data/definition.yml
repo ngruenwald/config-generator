@@ -13,8 +13,6 @@ options:
       args:
         - type: "const std::string&"
           name: "foo"
-      variant_types:
-        - "std::vector<Test43Bar>"
 
 elements:
   types:
@@ -46,17 +44,11 @@ elements:
     required: True
 
   an_array:
-    type: array
-    items:
-      type: int
+    $ref: '#/types/integer-array'
     required: True
 
   a_dictionary:
-    type: dictionary
-    keys:
-      type: string
-    values:
-      type: string
+    $ref: '#/types/string-string-dict'
     required: True
 
   an_enum:
