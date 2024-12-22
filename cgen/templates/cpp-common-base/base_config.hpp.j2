@@ -24,13 +24,17 @@ std::optional<{{ m.type_case(member.type.name) }}> {{ m.value_case(member.name) 
 
 {%- macro insert_optional_vector(member) -%}
 {#-{%- if not member.required and not member.default %}std::optional<{% endif -%}-#}
-std::vector<{{ m.type_name(m.get_type(member.type.item_type)) }}>
+{%- if member.type.name in unique_types -%} {{ m.type_case(member.type.name) }}
+{%- else -%} std::vector<{{ m.type_name(m.get_type(member.type.item_type)) }}>
+{%- endif %}
 {#-{%- if not member.required and not member.default %}>{% endif -%}-#}
 {%- endmacro -%}
 
 {%- macro insert_optional_map(member) -%}
 {#-{%- if not member.required and not member.default %}std::optional<{% endif -%}-#}
-std::map<{{ m.type_name(m.get_type(member.type.key_type)) }}, {{ m.type_name(m.get_type(member.type.value_type)) }}>
+{%- if member.type.name in unique_types -%} {{ m.type_case(member.type.name) }}
+{%- else -%} std::map<{{ m.type_name(m.get_type(member.type.key_type)) }}, {{ m.type_name(m.get_type(member.type.value_type)) }}>
+{%- endif %}
 {#-{%- if not member.required and not member.default %}>{% endif -%}-#}
 {%- endmacro -%}
 
