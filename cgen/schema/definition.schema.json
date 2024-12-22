@@ -1,0 +1,370 @@
+{
+  "$id": "https://github.com/ngruenwald/config-generator/schema/definition.schema.json",
+  "$schema": "https://json-schema.org/draft-06/schema#",
+  "title": "Config Generator",
+  "description": "Definition file for the config generator",
+  "type": "object",
+  "required": [
+    "config-gen",
+    "info",
+    "elements"
+  ],
+  "additionalProperties": false,
+  "properties": {
+
+    "config-gen": {
+      "description": "Version of the config generator",
+      "$ref": "#/definitions/VersionString"
+    },
+
+    "info": {
+      "description": "Generic information",
+      "$ref": "#/definitions/DefinitionInfo"
+    },
+
+    "options": {
+      "description": "Options",
+      "$ref": "#/definitions/GeneratorOptions"
+    },
+
+    "elements": {
+      "description": "Root elements",
+      "type": "object",
+      "additionalProperties": {"type": "object"},
+      "properties": {}
+    },
+
+    "types": {
+      "description": "Type definitions",
+      "type": "object",
+      "additionalProperties": {"type": "object"},
+      "properties": {}
+    }
+  },
+
+  "definitions": {
+
+    "VersionString": {
+      "description": "Version pattern",
+      "type": ["number", "string"],
+      "format": "float",
+      "pattern": "^\\d+(\\.\\d+){0,2}$"
+    },
+
+    "DefinitionInfo": {
+      "description": "Information about the config definition",
+      "type": "object",
+      "required": [
+        "title"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "version": {
+          "description": "Version of the configuration",
+          "$ref": "#/definitions/VersionString"
+        },
+        "title": {
+          "description": "Title of the configuration",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the configuration",
+          "type": "string"
+        }
+      }
+    },
+
+    "GeneratorOptions": {
+      "description": "Tuneable options for generators",
+      "type": "object",
+      "properties": {
+        "output_prefix": {
+          "description": "Prefix for generated files"
+        },
+
+        "cpp": {
+          "$ref": "#/definitions/CppOptions"
+        },
+        "svg": {
+          "$ref": "#/definitions/SvgOptions"
+        },
+        "xml": {
+          "$ref": "#/definitions/XmlOptions"
+        }
+      }
+    },
+
+    "CppOptions": {
+      "description": "Options for C++ generators",
+      "type": "object",
+      "properties": {
+
+        "namespaces": {
+          "description": "",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "use_optional": {
+          "description": "Use std::optional type",
+          "type": "boolean"
+        },
+
+        "use_print": {
+          "description": "Generate print functions",
+          "type": "boolean"
+        },
+
+        "use_validate": {
+          "description": "Validate configuration (e.g. XML schema)",
+          "type": "boolean"
+        },
+
+        "post_process": {
+          "description": "Create post-processing code",
+          "type": "object",
+          "properties": {
+            "use": {
+              "description": "Enable creation of post-processing code",
+              "type": "boolean"
+            },
+            "args": {
+              "description": "Arguments passed to the post-processing functions",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["type", "name"],
+                "properties": {
+                  "type": {
+                    "description": "Type of the argument",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "Name of the argument",
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "variant_types": {
+              "description": "[DEPRECATED] Workaround to add types to the post-process variant",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "SvgOptions": {
+      "description": "Options for SVG generators",
+      "type": "object",
+      "properties": {}
+    },
+
+    "XmlOptions": {
+      "description": "Options for XML generation",
+      "type": "object",
+      "properties": {}
+    },
+
+    "XsdOptions": {
+      "description": "Options for XML generation",
+      "type": "object",
+      "properties": {
+        "generate_descriptions": {
+          "description": "Enable the generation of documentation elements",
+          "type": "boolean"
+        }
+      }
+    },
+
+    "TypeTypes": {
+      "type": "string",
+      "enum": [
+        "int", "integer", "number",
+        "uint", "unsigned",
+        "float", "double",
+        "bool", "boolean",
+        "string",
+        "array", "list",
+        "dict", "dictionary", "map",
+        "object"
+      ]
+    },
+
+    "Type": {
+      "description": "Generic type",
+      "type": "object",
+      "required": [],
+      "additionalProperties": true,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "$ref": {
+          "description": "Reference",
+          "type": "string"
+        },
+        "default": {
+          "description": "Default value",
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "object",
+            "array",
+            "boolean",
+            "null"
+          ]
+        },
+        "xml": {
+          "description": "XML options",
+          "$ref": "#/definitions/XmlTypeOptions"
+        }
+      }
+    },
+
+    "ArrayType": {
+      "description": "Array type",
+      "type": "object",
+      "required": [
+        "type",
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= array)",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "items": {
+          "$ref": "#/definitions/Type"
+        },
+        "itemName": {
+          "description": "Name of the array entries",
+          "type": "string"
+        },
+        "minItems": {
+          "description": "Minimum number of items",
+          "type": "integer"
+        },
+        "maxItems": {
+          "description": "Maximum number of items",
+          "type": "integer"
+        },
+        "default": {
+          "description": "Default value",
+          "type": "array"
+        }
+      }
+    },
+
+    "DictionaryType": {
+      "description": "Dictionary type",
+      "type": "object",
+      "required": [
+        "type",
+        "keyes",
+        "values"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= dict)",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "keys": {
+          "$ref": "#/definitions/Type"
+        },
+        "values": {
+          "$ref": "#/definitions/Type"
+        },
+        "default": {
+          "description": "Default value",
+          "type": "object"
+        }
+      }
+    },
+
+    "ObjectType": {
+      "description": "Object type",
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "properties": {
+          "description": "Fields of the object",
+          "type": "object"
+        },
+        "required": {
+          "description": "List of required fields",
+          "type": "array"
+        }
+      }
+    },
+
+    "XmlTypeOptions": {
+      "description": "Type options for XML generators",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "XML sequence type",
+          "type": "string",
+          "enum": ["sequence", "choice", "all"]
+        },
+        "min": {
+          "description": "Minimum number of elements",
+          "type": "number"
+        },
+        "max": {
+          "description": "Maximum number of elements",
+          "type": "number"
+        },
+
+        "name": {
+          "description": "Name of the element",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The URI of the namespace definition.",
+          "type": "string"
+        },
+        "prefix": {
+          "description": "The prefix to be used for the name",
+          "type": "string"
+        },
+        "attribute": {
+          "description": "Create field as attribute or element",
+          "type": "boolean"
+        },
+        "wrapped": {
+          "description": "Create array with or without a wrapping element",
+          "type": "boolean"
+        }
+      }
+    }
+
+  }
+}

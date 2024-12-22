@@ -17,6 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "Jinja2",
+    "jsonschema",
     "PyYAML"
 ]
 

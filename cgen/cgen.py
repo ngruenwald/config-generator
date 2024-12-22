@@ -7,6 +7,7 @@ import yaml
 
 from copy import deepcopy
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError, ChainableUndefined
+from jsonschema import validate
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -27,8 +28,10 @@ class Loader:
         self.data = dict()
         self.search_paths = []
 
-    def load(self, path):
+    def load(self, path, schema_path: str | None = None):
         self._load_yaml(path)
+        if schema_path:
+            self._validate(schema_path)
 
     def _load_yaml(self, filepath):
         paths = [filepath]
@@ -53,6 +56,11 @@ class Loader:
                     data[key] = f'#{path}'
             if isinstance(value, dict):
                 self._load_references(value)
+
+    def _validate(self, schema_path: str):
+        with open(schema_path, 'r') as stream:
+            schema = yaml.safe_load(stream)
+            validate(self.data, schema)
 
     @staticmethod
     def merge(source, destination):
@@ -317,9 +325,13 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
         if not template_path:
             raise FileNotFoundError('template path not found')
 
+        schema_path = find_schema_path('definition.schema.json')
+        if not schema_path:
+            raise FileNotFoundError('schema path not found')
+
         loader = Loader()
-        loader.search_paths = ["definition", input_path]  # TODO: config
-        loader.load(definition)
+        loader.search_paths = ['definition', input_path]  # TODO: config
+        loader.load(definition, schema_path)
 
         types = load_types(loader.data, 'types')
         elements = load_types(loader.data, 'elements')
@@ -428,6 +440,22 @@ def find_template_path(path: str):
     for bp in base_paths:
         tp = bp / path
         if os.path.isdir(tp):
+            return tp
+    return None
+
+
+def find_schema_path(path: str):
+    if os.path.isabs(path):
+        return path
+    base_paths = [
+        Path.cwd(),
+        Path.cwd() / 'schema',
+        Path.home() / '.config/cgen/schema',
+        Path(__file__).parent.absolute() / 'schema'
+    ]
+    for bp in base_paths:
+        tp = bp / path
+        if os.path.isfile(tp):
             return tp
     return None
 
