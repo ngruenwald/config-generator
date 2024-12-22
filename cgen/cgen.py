@@ -5,13 +5,14 @@ import os
 import shutil
 import yaml
 
+from copy import deepcopy
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError, ChainableUndefined
 from pathlib import Path
 from typing import List, Dict, Optional
 
 from .doc import create_render_data
 from .jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
-from .spec_types import ArrayType, DictionaryType, ObjectType, ObjectField, Type
+from .spec_types import ArrayType, DictionaryType, EnumType, ObjectType, ObjectField, Type
 from .spec_types import Constraint
 from .spec_types import load_type, load_constraints
 
@@ -67,6 +68,97 @@ class Loader:
 #
 #
 #
+
+
+def create_name_with_counter(name: str, types: List[Type], counter: int = 0) -> str:
+    while True:
+        cname: str= f'{name}-{counter}'
+        if not any(x.name == cname for x in types):
+            return cname
+        counter += 1
+
+
+def create_name_with_opt_counter(name: str, types: List[Type]) -> str:
+    if not any(x.name == name for x in types):
+        return name
+    return create_name_with_counter(name, types, counter=1)
+
+
+def create_name(outer_name: list[str], types: List[Type], suffix: str | None = None) -> str:
+    full_name: bool = False
+    append_suffix: bool = False
+    if full_name:
+        name: str = '-'.join(outer_name)
+    else:
+        name = outer_name[-1]
+    if append_suffix and suffix:
+        name = name + suffix
+    return create_name_with_opt_counter(name, types)
+
+
+def create_name2(type: Type, types: List[Type], merge_collection_types: bool) -> str:
+    if isinstance(type, ArrayType):
+        at: ArrayType = type
+        name: str = f"array_of_{at.item_type.type}"
+        if merge_collection_types:
+            return name
+        return create_name_with_opt_counter(name, types)
+    if isinstance(type, DictionaryType):
+        dt: DictionaryType = type
+        name: str = f"dict_of_{dt.key_type.type}_{dt.value_type.type}"
+        if merge_collection_types:
+            return name
+        return create_name_with_opt_counter(name, types)
+    return create_name([type.name], types, get_type_suffix(type))
+
+
+def clone_type(type: Type, type_name: str) -> Type:
+    clone = deepcopy(type)
+    clone.name = type_name
+    clone.alias = type_name
+    clone.is_nested = True
+    return clone
+
+
+def create_nested_type(outer_name: List[str], type: Type, types: List[Type], suffix: str) -> None:
+    if any(x.name == type.name for x in types):
+        return
+    merge_collection_types: bool = False  # this might be a problem if properties differ
+    type_name: str = create_name2(type, types, merge_collection_types)
+    if not any(x.name == type_name for x in types):
+        types.append(clone_type(type, type_name))
+    type.name = type_name
+
+
+def get_type_suffix(type: Type) -> str:
+    if isinstance(type, ArrayType):
+        return '-array'
+    if isinstance(type, DictionaryType):
+        return '-dict'
+    if isinstance(type, EnumType):
+        return '-enum'
+    if isinstance(type, ObjectType):
+        return '-object'
+    return '-type'
+
+
+def extract_nested_types_from_type(outer_name: List[str], type: Type, types: List[Type]) -> None:
+    if type.is_ref:
+        return
+
+    if isinstance(type, ObjectType):
+        objtype: ObjectType = type
+        for field in objtype.fields:
+            extract_nested_types_from_type(outer_name + [field.name], field.type, types)
+
+    create_nested_type(outer_name, type, types, get_type_suffix(type))
+
+
+def extract_nested_types(types: List[Type], elements: List[Type]) -> None:
+    for type in types:
+        extract_nested_types_from_type([type.name], type, types)
+    for type in elements:
+        extract_nested_types_from_type([type.name], type, types)
 
 
 def sort_type(types: List[Type], current: Type) -> List[Type]:
@@ -227,9 +319,12 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
         loader.load(definition)
 
         types = load_types(loader.data, 'types')
+        elements = load_types(loader.data, 'elements')
+
+        extract_nested_types(types, elements)
+
         types = sort_types(types)
         types = filter_types(types)
-        elements = load_types(loader.data, 'elements')
 
         constraints = load_constraints(loader.data)
         assign_constraints(types, elements, constraints)

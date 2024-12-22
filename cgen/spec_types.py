@@ -11,6 +11,8 @@ class Type:
         self.alias = name
         self.constraints = []
         self.xml = xml if xml else {}
+        self.is_ref = False
+        self.is_nested = False
 
     def __str__(self):
         return f'Type{{name={self.name},type={self.type},alias={self.alias},constraints={self.constraints}}}'
@@ -386,6 +388,7 @@ def load_ref_type(data: Dict, name: str, props: Dict) -> Type:
     key, value = data_from_path(data, path[1:])
     t = load_type(data, key, value)
     t.alias = name
+    t.is_ref = True
 
     # 2. overwrite properties if present
     if isinstance(t, IntegerType):
