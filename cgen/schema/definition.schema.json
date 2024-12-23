@@ -30,14 +30,18 @@
     "elements": {
       "description": "Root elements",
       "type": "object",
-      "additionalProperties": {"type": "object"},
+      "additionalProperties": {
+        "$ref": "#/definitions/Type"
+      },
       "properties": {}
     },
 
     "types": {
       "description": "Type definitions",
       "type": "object",
-      "additionalProperties": {"type": "object"},
+      "additionalProperties": {
+        "$ref": "#/definitions/Type"
+      },
       "properties": {}
     }
   },
@@ -198,9 +202,26 @@
     },
 
     "Type": {
+      "anyOf": [
+        { "$ref": "#/definitions/GenericType" },
+        { "$ref": "#/definitions/IntegerType" },
+        { "$ref": "#/definitions/FloatingType" },
+        { "$ref": "#/definitions/BooleanType" },
+        { "$ref": "#/definitions/StringType" },
+        { "$ref": "#/definitions/ArrayType" },
+        { "$ref": "#/definitions/DictionaryType" },
+        { "$ref": "#/definitions/ObjectType" }
+      ]
+    },
+
+    "GenericType": {
       "description": "Generic type",
       "type": "object",
       "required": [],
+      "oneOf": [
+        { "required": ["type"] },
+        { "required": ["$ref"] }
+      ],
       "additionalProperties": true,
       "properties": {
         "description": {
@@ -227,8 +248,171 @@
             "null"
           ]
         },
+
         "xml": {
           "description": "XML options",
+          "$ref": "#/definitions/XmlTypeOptions"
+        }
+      }
+    },
+
+    "IntegerType": {
+      "description": "Integer type",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= int,integer,number or uint,unsigned)",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "default": {
+          "description": "Default value",
+          "type": ["integer", "array"],
+          "items": {
+            "type": "integer"
+          }
+        },
+        "base": {
+          "description": "Number base",
+          "type": "integer"
+        },
+        "min": {
+          "description": "Minimum value",
+          "type": "integer"
+        },
+        "max": {
+          "description": "Maximum value",
+          "type": "integer"
+        },
+
+        "enum": {
+          "description": "Enumeration values",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+
+        "xml": {
+          "$ref": "#/definitions/XmlTypeOptions"
+        }
+      }
+    },
+
+    "FloatingType": {
+      "description": "Floating type",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= float,double)",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "default": {
+          "description": "Default value",
+          "type": "number"
+        },
+        "min": {
+          "description": "Minimum value",
+          "type": "number"
+        },
+        "max": {
+          "description": "Maximum value",
+          "type": "number"
+        },
+
+        "xml": {
+          "$ref": "#/definitions/XmlTypeOptions"
+        }
+      }
+    },
+
+    "BooleanType": {
+      "description": "Boolean type",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= bool,boolean)",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "default": {
+          "description": "Default value",
+          "type": "boolean"
+        },
+
+        "xml": {
+          "$ref": "#/definitions/XmlTypeOptions"
+        }
+      }
+    },
+
+    "StringType": {
+      "description": "String type",
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "description": "Description of the type",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= string)",
+          "$ref": "#/definitions/TypeTypes"
+        },
+        "default": {
+          "description": "Default value",
+          "type": ["string", "array"],
+          "items": {
+            "type": "string"
+          }
+        },
+        "pattern": {
+          "description": "Regex pattern",
+          "type": "string"
+        },
+        "min": {
+          "description": "Minimum length",
+          "type": "integer"
+        },
+        "max": {
+          "description": "Maximum length",
+          "type": "integer"
+        },
+
+        "enum": {
+          "description": "Enumeration values",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
         }
       }
@@ -248,7 +432,7 @@
           "type": "string"
         },
         "type": {
-          "description": "Type of the type (= array)",
+          "description": "Type of the type (= array,list)",
           "$ref": "#/definitions/TypeTypes"
         },
         "items": {
@@ -269,6 +453,10 @@
         "default": {
           "description": "Default value",
           "type": "array"
+        },
+
+        "xml": {
+          "$ref": "#/definitions/XmlTypeOptions"
         }
       }
     },
@@ -288,7 +476,7 @@
           "type": "string"
         },
         "type": {
-          "description": "Type of the type (= dict)",
+          "description": "Type of the type (= dict,dictionary,map)",
           "$ref": "#/definitions/TypeTypes"
         },
         "keys": {
@@ -300,6 +488,10 @@
         "default": {
           "description": "Default value",
           "type": "object"
+        },
+
+        "xml": {
+          "$ref": "#/definitions/XmlTypeOptions"
         }
       }
     },
@@ -307,12 +499,18 @@
     "ObjectType": {
       "description": "Object type",
       "type": "object",
-      "required": [],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
         "description": {
           "description": "Description of the type",
           "type": "string"
+        },
+        "type": {
+          "description": "Type of the type (= object)",
+          "$ref": "#/definitions/TypeTypes"
         },
         "properties": {
           "description": "Fields of the object",
@@ -321,6 +519,10 @@
         "required": {
           "description": "List of required fields",
           "type": "array"
+        },
+
+        "xml": {
+          "$ref": "#/definitions/XmlTypeOptions"
         }
       }
     },
