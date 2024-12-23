@@ -189,7 +189,7 @@
 </xs:element>
       {%- endif -%}
     {%- else -%}
-<xs:element name="{{ element.name }}" type="{{ type_name(element.type, unique_types) }}"
+<xs:element name="{{ element.name }}" type="{{ type_name(element.type.item_type, unique_types) }}"
 {%- if element.type.minsize is not none %} minOccurs="{{ element.type.minsize }}"{% else %} minOccurs="0"{% endif -%}
 {%- if element.type.maxsize is not none %} maxOccurs="{{ element.type.maxsize }}"{% else %} maxOccurs="unbounded"{% endif -%}
 >
