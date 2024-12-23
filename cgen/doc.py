@@ -1,4 +1,4 @@
-from typing import Union, List, Dict
+from typing import Union
 from dataclasses import dataclass
 
 
@@ -10,10 +10,10 @@ class DocEntry:
     default: Union[float, str, int]
 
 
-def create_render_data(docs: List[DocEntry]) -> Dict:
+def create_render_data(docs: list[DocEntry]) -> dict:
     sections = {}
     for d in docs:
-        s = d.xpath.split('/')
+        s = d.xpath.split("/")
         if len(s) < 2:
             if s[0] not in sections.keys():
                 sections[s[0]] = []

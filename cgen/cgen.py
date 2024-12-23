@@ -6,14 +6,33 @@ import shutil
 import yaml
 
 from copy import deepcopy
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateError, ChainableUndefined
+from jinja2 import (
+    Environment,
+    FileSystemLoader,
+    TemplateSyntaxError,
+    TemplateError,
+    ChainableUndefined,
+)
 from jsonschema import validate
 from pathlib import Path
-from typing import List, Dict, Optional
 
 from .doc import create_render_data
-from .jinja_filters import j2_base, j2_camel_case, j2_pascal_case, j2_snake_case, j2_title_case, j2_is_type
-from .spec_types import ArrayType, DictionaryType, EnumType, ObjectType, ObjectField, Type
+from .jinja_filters import (
+    j2_base,
+    j2_camel_case,
+    j2_pascal_case,
+    j2_snake_case,
+    j2_title_case,
+    j2_is_type,
+)
+from .spec_types import (
+    ArrayType,
+    DictionaryType,
+    EnumType,
+    ObjectType,
+    ObjectField,
+    Type,
+)
 from .spec_types import Constraint
 from .spec_types import load_type, load_constraints
 
@@ -28,17 +47,17 @@ class Loader:
         self.data = dict()
         self.search_paths = []
 
-    def load(self, path, schema_path: str | None = None):
+    def load(self, path: str, schema_path: str | None = None):
         self._load_yaml(path)
         if schema_path:
             self._validate(schema_path)
 
-    def _load_yaml(self, filepath):
+    def _load_yaml(self, filepath: str):
         paths = [filepath]
         [paths.append(os.path.join(sp, filepath)) for sp in self.search_paths]
         for path in paths:
             try:
-                with open(path, 'r') as stream:
+                with open(path, "r") as stream:
                     data = yaml.safe_load(stream)
             except FileNotFoundError:
                 continue
@@ -47,23 +66,23 @@ class Loader:
             return
         raise FileNotFoundError(filepath)
 
-    def _load_references(self, data):
+    def _load_references(self, data: dict):
         for key, value in data.items():
-            if key == '$ref':
-                file, path = value.split('#', 1)
-                if not file == '':
+            if key == "$ref":
+                file, path = value.split("#", 1)
+                if not file == "":
                     self._load_yaml(file)
-                    data[key] = f'#{path}'
+                    data[key] = f"#{path}"
             if isinstance(value, dict):
                 self._load_references(value)
 
     def _validate(self, schema_path: str):
-        with open(schema_path, 'r') as stream:
+        with open(schema_path, "r") as stream:
             schema = yaml.safe_load(stream)
             validate(self.data, schema)
 
     @staticmethod
-    def merge(source, destination):
+    def merge(source: dict, destination: dict):
         for key, value in source.items():
             if isinstance(value, dict):
                 node = destination.setdefault(key, {})
@@ -78,25 +97,36 @@ class Loader:
 #
 
 
-def create_name_with_counter(name: str, types: List[Type], counter: int = 0) -> str:
+def create_name_with_counter(
+    name: str,
+    types: list[Type],
+    counter: int = 0,
+) -> str:
     while True:
-        cname: str= f'{name}-{counter}'
+        cname: str = f"{name}-{counter}"
         if not any(x.name == cname for x in types):
             return cname
         counter += 1
 
 
-def create_name_with_opt_counter(name: str, types: List[Type]) -> str:
+def create_name_with_opt_counter(
+    name: str,
+    types: list[Type],
+) -> str:
     if not any(x.name == name for x in types):
         return name
     return create_name_with_counter(name, types, counter=1)
 
 
-def create_name(outer_name: list[str], types: List[Type], suffix: str | None = None) -> str:
+def create_name(
+    outer_name: list[str],
+    types: list[Type],
+    suffix: str | None = None,
+) -> str:
     full_name: bool = False
     append_suffix: bool = False
     if full_name:
-        name: str = '-'.join(outer_name)
+        name: str = "-".join(outer_name)
     else:
         name = outer_name[-1]
     if append_suffix and suffix:
@@ -104,18 +134,34 @@ def create_name(outer_name: list[str], types: List[Type], suffix: str | None = N
     return create_name_with_opt_counter(name, types)
 
 
-def create_name2(type: Type, types: List[Type], merge_collection_types: bool) -> str:
+def create_name2(
+    type: Type,
+    types: list[Type],
+    merge_collection_types: bool,
+) -> str:
     if isinstance(type, ArrayType):
         at: ArrayType = type
-        iname: str = at.item_type.name if isinstance(at.item_type, ObjectType) else at.item_type.type
+        iname: str = (
+            at.item_type.name
+            if isinstance(at.item_type, ObjectType)
+            else at.item_type.type
+        )
         name: str = f"{iname}_array"
         if merge_collection_types:
             return name
         return create_name_with_opt_counter(name, types)
     if isinstance(type, DictionaryType):
         dt: DictionaryType = type
-        kname: str = dt.key_type.name if isinstance(dt.key_type, ObjectType) else dt.key_type.type
-        vname: str = dt.value_type.name if isinstance(dt.value_type, ObjectType) else dt.value_type.type
+        kname: str = (
+            dt.key_type.name
+            if isinstance(dt.key_type, ObjectType)
+            else dt.key_type.type
+        )
+        vname: str = (
+            dt.value_type.name
+            if isinstance(dt.value_type, ObjectType)
+            else dt.value_type.type
+        )
         name: str = f"{kname}_{vname}_dict"
         if merge_collection_types:
             return name
@@ -131,7 +177,12 @@ def clone_type(type: Type, type_name: str) -> Type:
     return clone
 
 
-def create_nested_type(outer_name: List[str], type: Type, types: List[Type], suffix: str) -> None:
+def create_nested_type(
+    outer_name: list[str],
+    type: Type,
+    types: list[Type],
+    suffix: str,
+) -> None:
     if any(x.name == type.name for x in types):
         return
     merge_collection_types: bool = False  # this might be a problem if properties differ
@@ -143,17 +194,21 @@ def create_nested_type(outer_name: List[str], type: Type, types: List[Type], suf
 
 def get_type_suffix(type: Type) -> str:
     if isinstance(type, ArrayType):
-        return '-array'
+        return "-array"
     if isinstance(type, DictionaryType):
-        return '-dict'
+        return "-dict"
     if isinstance(type, EnumType):
-        return '-enum'
+        return "-enum"
     if isinstance(type, ObjectType):
-        return '-object'
-    return '-type'
+        return "-object"
+    return "-type"
 
 
-def extract_nested_types_from_type(outer_name: List[str], type: Type, types: List[Type]) -> None:
+def extract_nested_types_from_type(
+    outer_name: list[str],
+    type: Type,
+    types: list[Type],
+) -> None:
     if type.is_ref:
         return
 
@@ -165,14 +220,14 @@ def extract_nested_types_from_type(outer_name: List[str], type: Type, types: Lis
     create_nested_type(outer_name, type, types, get_type_suffix(type))
 
 
-def extract_nested_types(types: List[Type], elements: List[Type]) -> None:
+def extract_nested_types(types: list[Type], elements: list[Type]) -> None:
     for type in types:
         extract_nested_types_from_type([type.name], type, types)
     for type in elements:
         extract_nested_types_from_type([type.name], type, types)
 
 
-def sort_type(types: List[Type], current: Type) -> List[Type]:
+def sort_type(types: list[Type], current: Type) -> list[Type]:
     sorted_ = []
     if isinstance(current, ArrayType):
         sorted_.extend(sort_type(types, current.item_type))
@@ -191,18 +246,7 @@ def sort_type(types: List[Type], current: Type) -> List[Type]:
     return sorted_
 
 
-# def sort_type2(current: Type, types: List[Type]) -> List[Type]:
-#     sorted = []
-#     if isinstance(current, ArrayType):
-#         sorted.extend(sort_type2(current.item_type, types))
-#     elif isinstance(current, ObjectType):
-#         for field in current.fields:
-#             sorted.extend(sort_type2(field.type, types))
-#     sorted.append(current)
-#     return sorted
-
-
-def sort_types(types: List[Type]) -> List[Type]:
+def sort_types(types: list[Type]) -> list[Type]:
     unsorted = types[:]
     sorted_ = []
     while len(unsorted) > 0:
@@ -210,7 +254,7 @@ def sort_types(types: List[Type]) -> List[Type]:
     return sorted_
 
 
-def filter_types(types: List[Type]) -> List[Type]:
+def filter_types(types: list[Type]) -> list[Type]:
     names = {}
     filtered = []
     for type in types:
@@ -221,7 +265,7 @@ def filter_types(types: List[Type]) -> List[Type]:
     return filtered
 
 
-def load_types(types_dict: Dict, elem: str) -> List[Type]:
+def load_types(types_dict: dict, elem: str) -> list[Type]:
     types = []
     for key, value in types_dict[elem].items():
         t = load_type(types_dict, key, value)
@@ -230,16 +274,20 @@ def load_types(types_dict: Dict, elem: str) -> List[Type]:
     return types
 
 
-def assign_constraints(types: List[Type], elements: List[Type], constraints: List[Constraint]):
-    def find_elem(data: List[Type], path: str) -> Optional[Type]:
-        name = path.split('/')[-1]
+def assign_constraints(
+    types: list[Type],
+    elements: list[Type],
+    constraints: list[Constraint],
+):
+    def find_elem(data: list[Type], path: str) -> Type | None:
+        name = path.split("/")[-1]
         for x in data:
             if x.name == name or x.alias == name:
                 return x
         return None
 
-    def find_type(data: List[Type], path: str) -> Optional[Type]:
-        name = path.split('/')[-1]
+    def find_type(data: list[Type], path: str) -> Type | None:
+        name = path.split("/")[-1]
         for x in data:
             if not isinstance(x, ObjectType):
                 continue
@@ -266,16 +314,12 @@ def assign_constraints(types: List[Type], elements: List[Type], constraints: Lis
 #
 
 
-TEMPLATE_DEFAULT_CONFIG = {
-    'template': {
-        'publish': []
-    }
-}
+TEMPLATE_DEFAULT_CONFIG = {"template": {"publish": []}}
 
 
 def load_template_config(path: str):
     try:
-        with open(Path(path) / 'template.yml', 'r') as stream:
+        with open(Path(path) / "template.yml", "r") as stream:
             return yaml.safe_load(stream)
     except FileNotFoundError:
         return TEMPLATE_DEFAULT_CONFIG
@@ -287,28 +331,28 @@ def load_template_config(path: str):
 
 
 def create_path(path: str):
-    os.makedirs(path, exist_ok = True)
+    os.makedirs(path, exist_ok=True)
 
 
 def render(env: Environment, template_file: str, output_path: str, data):
-    template = env.get_template(template_file + '.j2')
+    template = env.get_template(template_file + ".j2")
     try:
         output = template.render(data)
     except TemplateSyntaxError as e:
-        logging.error(f'Template syntax error ({e.filename}, {e.lineno}): {e.message}')
+        logging.error(f"Template syntax error ({e.filename}, {e.lineno}): {e.message}")
         raise
     except TemplateError as e:
-        logging.error(f'Template error: {e.message}')
+        logging.error(f"Template error: {e.message}")
         raise
 
     try:
-        prefix = data['options']['output_prefix']
+        prefix = data["options"]["output_prefix"]
     except KeyError:
-        prefix = ''
+        prefix = ""
 
     output_file = os.path.join(output_path, prefix + os.path.basename(template_file))
 
-    with open(output_file, 'w') as stream:
+    with open(output_file, "w") as stream:
         stream.write(output)
 
 
@@ -317,24 +361,30 @@ def render(env: Environment, template_file: str, output_path: str, data):
 #
 
 
-def config_generator(definition: str, template_path: str, output_path: str, input_path: str) -> int:
+def config_generator(
+    definition: str,
+    template_path: str,
+    output_path: str,
+    input_path: str,
+) -> int:
     try:
         logging.info(f'processing template "{template_path}"')
 
-        template_path = find_template_path(template_path)
-        if not template_path:
-            raise FileNotFoundError('template path not found')
+        full_template_path: str | None = find_template_path(template_path)
+        if not full_template_path:
+            raise FileNotFoundError("template path not found")
+        template_path = full_template_path
 
-        schema_path = find_schema_path('definition.schema.json')
+        schema_path: str | None = find_schema_path("definition.schema.json")
         if not schema_path:
-            raise FileNotFoundError('schema path not found')
+            raise FileNotFoundError("schema path not found")
 
         loader = Loader()
-        loader.search_paths = ['definition', input_path]  # TODO: config
+        loader.search_paths = ["definition", input_path]  # TODO: config
         loader.load(definition, schema_path)
 
-        types = load_types(loader.data, 'types')
-        elements = load_types(loader.data, 'elements')
+        types = load_types(loader.data, "types")
+        elements = load_types(loader.data, "elements")
 
         extract_nested_types(types, elements)
 
@@ -349,71 +399,80 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
         render_data = dict()
 
         try:
-            render_data['info'] = loader.data['info']
+            render_data["info"] = loader.data["info"]
         except KeyError:
-            render_data['info'] = dict()
+            render_data["info"] = dict()
         try:
-            render_data['options'] = loader.data['options']
+            render_data["options"] = loader.data["options"]
         except KeyError:
-            render_data['options'] = dict()
+            render_data["options"] = dict()
 
-        render_data['definition'] = definition
-        render_data['types'] = types
-        render_data['elements'] = elements
+        render_data["definition"] = definition
+        render_data["types"] = types
+        render_data["elements"] = elements
 
-        render_data['config'] = ObjectType(
-            name='config',
-            type_='object',
-            description='Configuration',
-            fields=[ObjectField(e.alias, e, e.description, e.required if hasattr(e, 'required') else False) for e in
-                    elements]
+        render_data["config"] = ObjectType(
+            name="config",
+            type_="object",
+            description="Configuration",
+            fields=[
+                ObjectField(
+                    e.alias,
+                    e,
+                    e.description,
+                    e.required if hasattr(e, "required") else False,
+                )
+                for e in elements
+            ],
         )
 
         type_names = set([t.name for t in types])
         elem_names = set([e.name for e in elements])
 
-        render_data['unique_elements'] = list(elem_names.difference(type_names))
-        render_data['unique_types'] = list(type_names.union(elem_names))
+        render_data["unique_elements"] = list(elem_names.difference(type_names))
+        render_data["unique_types"] = list(type_names.union(elem_names))
 
-        render_data['docs'] = create_render_data(render_data['config'].doc('config'))
+        render_data["docs"] = create_render_data(render_data["config"].doc("config"))
 
-        template_paths = [template_path]
+        template_paths: list[str] = [template_path]
         try:
-            for dependency in template_config.get('template', {}).get('depends', []):
-                source = dependency.get('source', '')
+            for dependency in template_config.get("template", {}).get("depends", []):
+                source = dependency.get("source", "")
                 if source:
                     source_path = Path(source)
                     if source_path.is_absolute():
-                        template_paths.append(source_path)
+                        template_paths.append(str(source_path))
                     else:
-                        template_paths.append(Path(template_path) / source_path)
+                        template_paths.append(str(Path(template_path) / source_path))
         except Exception:
             pass
 
-        file_loader = FileSystemLoader(template_paths)  # [template_path, Path(template_path).parent])
+        file_loader = FileSystemLoader(
+            template_paths
+        )  # [template_path, Path(template_path).parent])
         env = Environment(loader=file_loader, undefined=ChainableUndefined)
 
-        env.filters['camel_case'] = j2_camel_case
-        env.filters['pascal_case'] = j2_pascal_case
-        env.filters['snake_case'] = j2_snake_case
-        env.filters['title_case'] = j2_title_case
-        env.filters['base'] = j2_base
-        env.tests['Type'] = j2_is_type
+        env.filters["camel_case"] = j2_camel_case
+        env.filters["pascal_case"] = j2_pascal_case
+        env.filters["snake_case"] = j2_snake_case
+        env.filters["title_case"] = j2_title_case
+        env.filters["base"] = j2_base
+        env.tests["Type"] = j2_is_type
 
         create_path(output_path)
 
-        for file_path in glob.glob(os.path.join(os.getcwd(), template_path, '*.j2')):
+        for file_path in glob.glob(os.path.join(os.getcwd(), template_path, "*.j2")):
             file_name = os.path.splitext(os.path.basename(file_path))[0]
-            if not file_name.startswith('_'):
+            if not file_name.startswith("_"):
                 render(env, file_name, output_path, render_data)
 
-        for publish_path in template_config['template']['publish']:
+        for publish_path in template_config["template"]["publish"]:
             if isinstance(publish_path, str):
                 source_path = Path(template_path) / Path(publish_path)
                 target_path = Path(output_path) / Path(publish_path)
             else:
-                source_path = Path(template_path) / Path(publish_path['from'])
-                target_path = Path(output_path) / Path(publish_path['to'])
+                source_path = Path(template_path) / Path(publish_path["from"])
+                target_path = Path(output_path) / Path(publish_path["to"])
             if os.path.isdir(source_path):
                 shutil.copytree(source_path, target_path, dirs_exist_ok=True)
             else:
@@ -422,51 +481,61 @@ def config_generator(definition: str, template_path: str, output_path: str, inpu
         return 0
 
     except TemplateSyntaxError as e:
-        logging.error(f'Template syntax error at {e.filename}:{e.lineno}:\n{e}')
+        logging.error(f"Template syntax error at {e.filename}:{e.lineno}:\n{e}")
     except Exception as e:
-        logging.error(f'Error: {e}')
+        logging.error(f"Error: {e}")
     return 1
 
 
-def find_template_path(path: str):
+def find_template_path(path: str) -> str | None:
     if os.path.isabs(path):
         return path
     base_paths = [
         Path.cwd(),
-        Path.cwd() / 'templates',
-        Path.home() / '.config/cgen/templates',
-        Path(__file__).parent.absolute() / 'templates'
+        Path.cwd() / "templates",
+        Path.home() / ".config/cgen/templates",
+        Path(__file__).parent.absolute() / "templates",
     ]
     for bp in base_paths:
         tp = bp / path
         if os.path.isdir(tp):
-            return tp
+            return str(tp)
     return None
 
 
-def find_schema_path(path: str):
+def find_schema_path(path: str) -> str | None:
     if os.path.isabs(path):
         return path
     base_paths = [
         Path.cwd(),
-        Path.cwd() / 'schema',
-        Path.home() / '.config/cgen/schema',
-        Path(__file__).parent.absolute() / 'schema'
+        Path.cwd() / "schema",
+        Path.home() / ".config/cgen/schema",
+        Path(__file__).parent.absolute() / "schema",
     ]
     for bp in base_paths:
         tp = bp / path
         if os.path.isfile(tp):
-            return tp
+            return str(tp)
     return None
 
 
 def cgen() -> int:
-    parser = argparse.ArgumentParser(description='Config generator')
-    parser.add_argument('definition', type=str, help='.yml definition file')
-    parser.add_argument('--template', type=str, nargs='+', help='template path - default: xsd, cpp-xmlwrp',
-                        default=['xsd', 'cpp-xmlwrp'])
-    parser.add_argument('--output', type=str, default='out', help='output path - default: out')
-    parser.add_argument('--input', type=str, default='', help='input path')
+    parser = argparse.ArgumentParser(description="Config generator")
+    parser.add_argument("definition", type=str, help=".yml definition file")
+    parser.add_argument(
+        "--template",
+        type=str,
+        nargs="+",
+        help="template path - default: xsd, cpp-xmlwrp",
+        default=["xsd", "cpp-xmlwrp"],
+    )
+    parser.add_argument(
+        "--output", type=str, default="out", help="output path - default: out"
+    )
+    parser.add_argument("--input", type=str, default="", help="input path")
     args = parser.parse_args()
-    rv = [config_generator(args.definition, t, args.output, args.input) for t in args.template]
+    rv = [
+        config_generator(args.definition, t, args.output, args.input)
+        for t in args.template
+    ]
     return max(rv) if rv else 1
