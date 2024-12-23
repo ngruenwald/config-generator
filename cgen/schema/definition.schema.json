@@ -203,14 +203,65 @@
 
     "Type": {
       "anyOf": [
-        { "$ref": "#/definitions/GenericType" },
-        { "$ref": "#/definitions/IntegerType" },
-        { "$ref": "#/definitions/FloatingType" },
-        { "$ref": "#/definitions/BooleanType" },
-        { "$ref": "#/definitions/StringType" },
-        { "$ref": "#/definitions/ArrayType" },
-        { "$ref": "#/definitions/DictionaryType" },
-        { "$ref": "#/definitions/ObjectType" }
+        {
+          "$ref": "#/definitions/GenericType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["int", "integer", "number", "uint", "unsigned"]
+            }
+          },
+          "$ref": "#/definitions/IntegerType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["float", "double"]
+            }
+          },
+          "$ref": "#/definitions/FloatingType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["bool", "boolean"]
+            }
+          },
+          "$ref": "#/definitions/BooleanType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["string"]
+            }
+          },
+          "$ref": "#/definitions/StringType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["array", "list"]
+            }
+          },
+          "$ref": "#/definitions/ArrayType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["dict", "dictionary", "map"]
+            }
+          },
+          "$ref": "#/definitions/DictionaryType"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": ["object"]
+            }
+          },
+          "$ref": "#/definitions/ObjectType"
+        }
       ]
     },
 
@@ -222,7 +273,7 @@
         { "required": ["type"] },
         { "required": ["$ref"] }
       ],
-      "additionalProperties": true,
+      "additionalProperties": false,
       "properties": {
         "description": {
           "description": "Description of the type",
@@ -252,6 +303,11 @@
         "xml": {
           "description": "XML options",
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -302,6 +358,11 @@
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -337,6 +398,11 @@
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -364,6 +430,11 @@
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -414,6 +485,11 @@
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -457,6 +533,11 @@
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -466,7 +547,7 @@
       "type": "object",
       "required": [
         "type",
-        "keyes",
+        "keys",
         "values"
       ],
       "additionalProperties": false,
@@ -492,6 +573,11 @@
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
     },
@@ -518,13 +604,28 @@
         },
         "required": {
           "description": "List of required fields",
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
 
         "xml": {
           "$ref": "#/definitions/XmlTypeOptions"
+        },
+
+        "use": {
+          "description": "Element usage",
+          "$ref": "#/definitions/ElementUse"
         }
       }
+    },
+
+    "ElementUse": {
+      "description": "Indicates if an element is required or optional",
+      "type": "string",
+      "enum": ["optional", "required"],
+      "default": "optional"
     },
 
     "XmlTypeOptions": {

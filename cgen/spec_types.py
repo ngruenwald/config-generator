@@ -435,7 +435,16 @@ def load_type(data: dict, name: str, props: dict) -> Type | None:
         res = load_type_(data, name, props)
         if not res:
             return None
-        res.required = props.get("required", False)
+        # res.required = props.get("required", False)  # deprecated
+        # res.required = props.get("use", "optional") == "required"
+        required_old: bool | None = props.get("required", None)
+        required_new: bool | None = props.get("use", None)
+        if required_old is not None:
+            res.required = required_old
+        elif required_new is not None:
+            res.required = required_new == "required"
+        else:
+            res.required = False
         return res
     except Exception:
         print(f'failed to load type "{name}"')

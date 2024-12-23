@@ -368,6 +368,7 @@ def config_generator(
     template_path: str,
     output_path: str,
     input_path: str,
+    validate_input: bool = True,
 ) -> int:
     try:
         logging.info(f'processing template "{template_path}"')
@@ -377,9 +378,11 @@ def config_generator(
             raise FileNotFoundError("template path not found")
         template_path = full_template_path
 
-        schema_path: str | None = find_schema_path("definition.schema.json")
-        if not schema_path:
-            raise FileNotFoundError("schema path not found")
+        schema_path: str | None = None
+        if validate_input:
+            schema_path = find_schema_path("definition.schema.json")
+            if not schema_path:
+                raise FileNotFoundError("schema path not found")
 
         loader = Loader()
         loader.search_paths = ["definition", input_path]  # TODO: config
@@ -422,7 +425,7 @@ def config_generator(
                     e.alias,
                     e,
                     e.description,
-                    e.required if hasattr(e, "required") else False,
+                    getattr(e, "required", False),
                 )
                 for e in elements
             ],
@@ -537,9 +540,12 @@ def cgen() -> int:
         "--output", type=str, default="out", help="output path - default: out"
     )
     parser.add_argument("--input", type=str, default="", help="input path")
+    parser.add_argument("--no-validate", action="store_true", help="skip validation")
     args = parser.parse_args()
     rv = [
-        config_generator(args.definition, t, args.output, args.input)
+        config_generator(
+            args.definition, t, args.output, args.input, not args.no_validate
+        )
         for t in args.template
     ]
     return max(rv) if rv else 1
