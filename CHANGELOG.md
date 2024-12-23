@@ -1,9 +1,9 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-The format is based on [Common Changelog](https://common-changelog.org/).
-Starting with version 1.0.0 this project will adhere to
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Common Changelog][CC].
+Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV].
+
 
 ## [0.4.0] - xxxx-xx-xx
 
@@ -17,9 +17,10 @@ Starting with version 1.0.0 this project will adhere to
 - **Breaking:** Un-/Wrapped XML arrays (defaults to unwrapped)
 - Properties as XML attributes or elements (defaults to attributes)
 - SVG template
-- LibXml2 template
+- LibXml2 templatew
 
 ### Fixed
+
 
 ## [0.3.5] - 2024-12-03
 
@@ -31,11 +32,13 @@ Starting with version 1.0.0 this project will adhere to
 
 - Support for different number bases
 
+
 ## [0.3.4] - 2024-12-02
 
 ### Fixed
 
 - Missing typename for enum default values
+
 
 ## [0.3.3] - 2024-11-29
 
@@ -43,6 +46,7 @@ Starting with version 1.0.0 this project will adhere to
 
 - XSD option to disable generation of documentation elements.
   Defaults to _false_.
+
 
 ## [0.3.2] - 2024-11-28
 
@@ -59,11 +63,13 @@ Starting with version 1.0.0 this project will adhere to
 - Missing defaults in cpp-xmlwrp header
 - XSD boolean format and array min/max
 
+
 ## [0.3.1] - 2024-11-27
 
 ### Fixed
 
 - Re-added lost YAML features (array and dict support, default values for arrays)
+
 
 ## [0.3.0] - 2024-11-27
 
@@ -86,9 +92,10 @@ Starting with version 1.0.0 this project will adhere to
 
 - Boolean defaults
 
-## [0.2.1] - 2024-09-13
-
 
 ---
 [«](README.md)
 
+
+[CC]: https://common-changelog.org
+[SV]: https://semver.org/spec/v2.0.0.html
