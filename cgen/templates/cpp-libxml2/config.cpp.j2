@@ -48,6 +48,7 @@ struct config_options
 
 constexpr const unsigned long FLAG_XML_ATTRIBUTE = 0x01;
 constexpr const unsigned long FLAG_XML_ELEMENT = 0x02;
+constexpr const unsigned long FLAG_XML_WRAPPED = 0x04;
 
 template<typename T>
 class LibXml2Deleter
@@ -222,7 +223,9 @@ inline bool contains_key(
         return false;
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (xmlHasProp(data.node, BAD_CAST key))
         {
@@ -230,7 +233,7 @@ inline bool contains_key(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (get_child(data.node, key))
         {
@@ -253,7 +256,9 @@ inline config_data_t get_key(
         throw std::runtime_error(msg.str());
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         auto prop = xmlGetProp(data.node, BAD_CAST key);
         if (prop)
@@ -262,7 +267,7 @@ inline config_data_t get_key(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         auto child = get_child(data.node, key);
         if (child)
@@ -282,7 +287,9 @@ inline void from_data(
     T& value,
     config_options opts)
 {
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (data.prop)
         {
@@ -292,7 +299,7 @@ inline void from_data(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (data.node)
         {
@@ -311,7 +318,9 @@ inline void from_data(
     int base,
     config_options opts)
 {
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ATTRIBUTE)
+    const auto flags = opts.flags & (FLAG_XML_ATTRIBUTE | FLAG_XML_ELEMENT);
+
+    if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
     {
         if (data.prop)
         {
@@ -321,7 +330,7 @@ inline void from_data(
         }
     }
 
-    if (opts.flags == 0 || opts.flags & FLAG_XML_ELEMENT)
+    if (flags == 0 || flags & FLAG_XML_ELEMENT)
     {
         if (data.node)
         {
@@ -393,6 +402,43 @@ inline void from_data(
                 value.insert(std::make_pair(key, val));
             }
         }
+    }
+}
+
+template<typename T>
+inline void get_mandatory_element(
+    const config_data_t& data,
+    const char* name,
+    std::vector<T>& value,
+    config_options opts)
+{
+    try
+    {
+        if (opts.flags & FLAG_XML_WRAPPED)
+        {
+            from_data(get_key(data, name {{- m.insert_fd_opts() -}}), value {{- m.insert_fd_opts() -}});
+        }
+        else
+        {
+            if (data.node)
+            {
+                for (auto node = xmlFirstElementChild(data.node); node; node = xmlNextElementSibling(node))
+                {
+                    if (name == nullptr || xmlStrcmp(node->name, BAD_CAST name) == 0)
+                    {
+                        T tmp;
+                        from_data({node}, tmp {{- m.insert_fd_opts() -}});
+                        value.push_back(tmp);
+                    }
+                }
+            }
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        std::ostringstream oss;
+        oss << "failed to retrieve element '" << name << "': " << ex.what();
+        throw std::runtime_error(oss.str());
     }
 }
 {% endblock %}
