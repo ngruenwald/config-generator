@@ -167,12 +167,13 @@ types:
     type: array
     items:
       type: integer
-    itemName: item
+    itemName: entry
 
   string-list:
     type: list
     items:
       type: string
+    itemName: item
 
   string-string-dict:
     type: dict  # dict / dictionary / map

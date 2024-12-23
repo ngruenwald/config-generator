@@ -17,17 +17,17 @@
   >
     <am>-1</am>
     <km>
-      <item>0</item>
-      <item>1</item>
-      <item>2</item>
-      <item>3</item>
+      <entry>0</entry>
+      <entry>1</entry>
+      <entry>2</entry>
+      <entry>3</entry>
     </km>
 
     <lm>
-      <entry>a</entry>
-      <entry>b</entry>
-      <entry>c</entry>
-      <entry>d</entry>
+      <item>a</item>
+      <item>b</item>
+      <item>c</item>
+      <item>d</item>
     </lm>
 
     <mm am="4" />
