@@ -1,11 +1,22 @@
-__pycache__/
-out/
-dist/
-.vscode/
-.venv/
-tests/cpp-xxxx/build/
-
+# Linux
 .directory
-.pdm-python
-.pdm.toml
-*.yml
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Visual Studio Code
+.vscode/
+
+# Project specific
+out/
+tests/cpp-xxxx/build/
+definitions/
+

@@ -2,28 +2,54 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+lint = [
+    "black>=24.10.0",
+    "ruff>=0.8.4",
+]
+
 [project]
 name = "cgen"
-version = "0.4.0"
-requires-python = ">=3.8"
+description = "Creates configuration parsers."
 authors = [
-    { name = "ngruenwald", email = "some@mail.com" }
+    {name = "ngruenwald", email = "40895194+ngruenwald@users.noreply.github.com"},
 ]
-description = "config generator"
-readme = "README.md"
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Code Generators",
 ]
 dependencies = [
-    "Jinja2",
-    "jsonschema",
-    "PyYAML"
+    "jinja2>=3.1.5",
+    "jsonschema>=4.23.0",
+    "pyyaml>=6.0.2",
 ]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {file = "LICENSE"}
+dynamic = ["version"]
+
+[project.scripts]
+cgen = "cgen:main"
 
 [project.urls]
-"Homepage" = "https://github.com/ngruenwald/config-generator"
+Documentation = "https://github.com/ngruenwald/config-generator#readme"
+Repository = "https://github.com/ngruenwald/config-generator"
+Tracker = "https://github.com/ngruenwald/config-generator/issues"
 
 [tool.hatch.build]
-include = ["*.py"]
-artifacts = ["cgen/templates/*"]
+artifacts = ["templates/*", "schema/*"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"templates" = "share/cgen/templates"
+"schema" = "share/cgen/schema"
+
+[tool.hatch.version]
+path = "src/cgen/__version__.py"
+pattern = "_pkg_version = \"(?P<version>[^']+)\""
+
+[tool.ruff]
+line-length = 120

@@ -1,3 +1,5 @@
+import logging
+
 from .doc import DocEntry
 
 
@@ -447,7 +449,7 @@ def load_type(data: dict, name: str, props: dict) -> Type | None:
             res.required = False
         return res
     except Exception:
-        print(f'failed to load type "{name}"')
+        logging.error(f'failed to load type "{name}"')
         raise
 
 
@@ -586,7 +588,7 @@ def load_constraints(data: dict) -> list[Constraint]:
                     continue
                 result.append(obj)
         except Exception:
-            print("failed to load constraints")
+            logging.error("failed to load constraints")
             raise
     return result
 
@@ -607,5 +609,5 @@ def load_constraint(data: dict) -> Constraint | None:
             )
         raise ValueError("unknown constraint type")
     except Exception:
-        print(f'failed to load constraint "{ctype}" "{cid}"')
+        logging.error(f'failed to load constraint "{ctype}" "{cid}"')
     return None

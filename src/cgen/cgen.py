@@ -3,6 +3,7 @@ import glob
 import logging
 import os
 import shutil
+import sys
 import yaml
 
 from copy import deepcopy
@@ -38,6 +39,8 @@ from .spec_types import (
 from .spec_types import Constraint
 from .spec_types import load_type, load_constraints
 
+
+from .__version__ import __version__
 
 #
 #
@@ -304,7 +307,7 @@ def assign_constraints(
         if elem is None:
             elem = find_type(types, cst.scope)
         if elem is None:
-            print(f'constraint scope "{cst.scope}" not found')
+            logging.warning(f'constraint scope "{cst.scope}" not found')
             continue
         # find path in data ... TODO
         # assign to scope object
@@ -452,6 +455,8 @@ def config_generator(
         except Exception:
             pass
 
+        logging.debug(f"Template paths: {template_paths}")
+
         file_loader = FileSystemLoader(
             template_paths
         )  # [template_path, Path(template_path).parent])
@@ -501,7 +506,8 @@ def find_template_path(path: str) -> str | None:
         Path.cwd(),
         Path.cwd() / "templates",
         Path.home() / ".config/cgen/templates",
-        Path(__file__).parent.absolute() / "templates",
+        Path(sys.prefix) / "share/cgen/templates",
+        Path(__file__).parent.parent.absolute() / "templates",
     ]
     for bp in base_paths:
         tp = bp / path
@@ -517,7 +523,8 @@ def find_schema_path(path: str) -> str | None:
         Path.cwd(),
         Path.cwd() / "schema",
         Path.home() / ".config/cgen/schema",
-        Path(__file__).parent.absolute() / "schema",
+        Path(sys.prefix) / "share/cgen/schema",
+        Path(__file__).parent.parent.absolute() / "schema",
     ]
     for bp in base_paths:
         tp = bp / path
@@ -528,6 +535,9 @@ def find_schema_path(path: str) -> str | None:
 
 def cgen() -> int:
     parser = argparse.ArgumentParser(description="Config generator")
+    parser.add_argument(
+        "-v", "--version", action="version", version=f"%(prog)s {__version__}"
+    )
     parser.add_argument("definition", type=str, help=".yml definition file")
     parser.add_argument(
         "--template",
