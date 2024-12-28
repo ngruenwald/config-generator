@@ -51,5 +51,3 @@ artifacts = ["templates/*", "schema/*"]
 path = "src/cgen/__version__.py"
 pattern = "_pkg_version = \"(?P<version>[^']+)\""
 
-[tool.ruff]
-line-length = 120
