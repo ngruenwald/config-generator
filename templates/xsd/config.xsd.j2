@@ -163,7 +163,7 @@
     {%- endfilter %}
 </xs:element>
   {%- elif element.type.type in ['array'] -%}
-    {%- if element.type.xml['wrapped'] | default(True) -%}
+    {%- if element.type.xml['wrapped'] | default(options["xml"]["wrapped_arrays"]) | default(options["xml"]["wrapped"]) | default(False) -%}
       {%- if element.type.item_type is none -%}
 <xs:element name="{{ element.name }}">
   <xs:complexType>

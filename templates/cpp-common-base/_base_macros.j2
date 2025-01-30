@@ -158,7 +158,7 @@ _
 {%- if opt.requires_opts -%}
 {%- if field.type.type in ['array'] -%}
 , {
-{%- if field.type.xml['wrapped'] | default(True) -%}  {#- global default via options? -#}
+{%- if field.type.xml['wrapped'] | default(opt.wrapped_arrays) -%}
 FLAG_XML_WRAPPED
 {%- else -%}
 0

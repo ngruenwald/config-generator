@@ -3,4 +3,5 @@
 {%- block specific_options -%}
   {{- set_opt(opt, 'use_element_names', True) -}}
   {{- set_opt(opt, 'requires_opts', True) -}}
+  {{- set_opt(opt, 'wrapped_arrays', options["xml"]["wrapped_arrays"] | default(options["xml"]["wrapped"]) | default(False)) -}}
 {%- endblock -%}
