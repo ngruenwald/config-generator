@@ -46,13 +46,13 @@ elements:
 
   opt:
     type: string
-    required: True
+    use: required
 ```
 
 The _elements_ block contains the main elements of the configuration.
 Elements can either be defined locally or they can reference types.
-By default an element is optional. Use the _required_ property to mark
-it as mandatory.
+By default an element is optional. Use the _use_ property to mark
+it as either _optional_ or _required_.
 
 #### types
 
