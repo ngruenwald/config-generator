@@ -5,7 +5,7 @@ The format is based on [Common Changelog][CC].
 Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV].
 
 
-## [0.4.0] - xxxx-xx-xx
+## [0.4.0] - 2025-01-30
 
 ### Changed
 
@@ -17,7 +17,7 @@ Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV
 - **Breaking:** Un-/Wrapped XML arrays (defaults to unwrapped)
 - Properties as XML attributes or elements (defaults to attributes)
 - SVG template
-- LibXml2 templatew
+- LibXml2 template
 
 ### Fixed
 
