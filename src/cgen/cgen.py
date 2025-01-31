@@ -35,6 +35,7 @@ from .spec_types import (
     ObjectType,
     ObjectField,
     Type,
+    is_equal_type
 )
 from .spec_types import Constraint
 from .spec_types import load_type, load_constraints
@@ -188,7 +189,7 @@ def create_nested_type(
     types: list[Type],
     suffix: str,
 ) -> None:
-    if any(x.name == type.name for x in types):
+    if any(is_equal_type(type, x) for x in types):
         return
     merge_collection_types: bool = False  # this might be a problem if properties differ
     type_name: str = create_name2(type, types, merge_collection_types)
@@ -245,6 +246,8 @@ def sort_type(types: list[Type], current: Type) -> list[Type]:
             sorted_.extend(sort_type(types, field.type))
 
     for t in types:
+        if current.is_ref:
+            continue
         if t.name == current.name:
             types.remove(t)
             sorted_.append(current)

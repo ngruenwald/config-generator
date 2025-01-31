@@ -611,3 +611,150 @@ def load_constraint(data: dict) -> Constraint | None:
     except Exception:
         logging.error(f'failed to load constraint "{ctype}" "{cid}"')
     return None
+
+#
+# A couple of comparison functions used for detecting and filtering out
+# duplicate types, but to keep those that have relevant changes.
+# These functions do not compare for complete equality of the the given
+# types, as this would lead to a lot of unnecessary type duplication.
+# Due to this "incompleteness" these functions are placed here and not
+# implemented on the types themselves.
+# I'll keep the omitted checks in here, but commented out, just to make clear
+# that they were considered but cannot be used for our purpose.
+# TODO:
+# implement a more generic approach with white/blacklists
+# of properties that need to match
+#
+
+def is_equal_type(a: Type, b: Type) -> bool:
+    try:
+        if a.name != b.name:
+            return False
+        if a.type != b.type:
+            return False
+        # if a.alias != b.alias:
+        #     return False
+        # if not is_equal_list(a.constraints, b.constraints):   # TODO: this one should be checked!
+        #     return False
+        if a.is_ref != b.is_ref:
+            return False
+        # if a.is_nested != b.is_nested:
+        #     return False
+        # if a.required != b.required:
+        #     return False
+
+        if isinstance(a, IntegerType) and isinstance(b, IntegerType):
+            return is_equal_type_integer(a, b)
+        if isinstance(a, FloatingType) and isinstance(b, FloatingType):
+            return is_equal_type_floating(a, b)
+        if isinstance(a, BooleanType) and isinstance(b, BooleanType):
+            return is_equal_type_boolean(a, b)
+        if isinstance(a, StringType) and isinstance(b, StringType):
+            return is_equal_type_string(a, b)
+        if isinstance(a, EnumType) and isinstance(b, EnumType):
+            return is_equal_type_enum(a, b)
+        if isinstance(a, ArrayType) and isinstance(b, ArrayType):
+            return is_equal_type_array(a, b)
+        if isinstance(a, DictionaryType) and isinstance(b, DictionaryType):
+            return is_equal_type_dictionary(a, b)
+        if isinstance(a, ObjectType) and isinstance(b, ObjectType):
+            return is_equal_type_object(a, b)
+        return False
+    except Exception as error:
+        print(error)
+        return False
+
+
+def is_equal_type_integer(a: IntegerType, b: IntegerType) -> bool:
+    if a.base != b.base:
+        return False
+    if a.min != b.min:
+        return False
+    if a.max != b.max:
+        return False
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_floating(a: FloatingType, b: FloatingType) -> bool:
+    if a.min != b.min:
+        return False
+    if a.max != b.max:
+        return False
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_boolean(a: BooleanType, b: BooleanType) -> bool:
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_string(a: StringType, b: StringType) -> bool:
+    if a.pattern != b.pattern:
+        return False
+    if a.min != b.min:
+        return False
+    if a.max != b.max:
+        return False
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_enum(a: EnumType, b: EnumType) -> bool:
+    if a.base_type != b.base_type:
+        return False
+    if len(a.enum) != len(b.enum):
+        return False
+    for idx in range(len(a.enum)):
+        if a.enum[idx] != b.enum[idx]:
+            return False
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_array(a: ArrayType, b: ArrayType) -> bool:
+    if not is_equal_type(a.item_type, b.item_type):
+        return False
+    if a.item_name != b.item_name:
+        return False
+    if a.minsize != b.minsize:
+        return False
+    if a.maxsize != b.maxsize:
+        return False
+    # # todo ... array compare
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_dictionary(a: DictionaryType, b: DictionaryType) -> bool:
+    if not is_equal_type(a.key_type, b.key_type):
+        return False
+    if not is_equal_type(a.value_type, b.value_type):
+        return False
+    # # todo ... dict compare
+    # if a.default != b.default:
+    #     return False
+    return True
+
+
+def is_equal_type_object_field(a: ObjectField, b: ObjectField) -> bool:
+    if a.name != b.name:
+        return False
+    if not is_equal_type(a.type, b.type):
+        return False
+    return True
+
+def is_equal_type_object(a: ObjectType, b: ObjectType) -> bool:
+    if len(a.fields) != len(b.fields):
+        return False
+    for idx in range(len(a.fields)):
+        if not is_equal_type_object_field(a.fields[idx], b.fields[idx]):
+            return False
+    return True
