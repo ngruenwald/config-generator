@@ -1,2 +1,2 @@
-__version__ = "0.4.0"
-_pkg_version = "0.4.0"
+__version__ = "0.4.1"
+_pkg_version = "0.4.1"
