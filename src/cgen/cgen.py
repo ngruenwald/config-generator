@@ -246,11 +246,11 @@ def sort_type(types: list[Type], current: Type) -> list[Type]:
             sorted_.extend(sort_type(types, field.type))
 
     for t in types:
-        if current.is_ref:
+        if t.name != current.name:
             continue
-        if t.name == current.name:
-            types.remove(t)
-            sorted_.append(current)
+        types.remove(t)
+        sorted_.append(t if current.is_ref else current)  # prefer non ref types
+
     return sorted_
 
 
