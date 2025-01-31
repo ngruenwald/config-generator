@@ -7,10 +7,12 @@ endfunction()
 function(cgen target template inputfile outputdir workdir)
   find_package(Python3 COMPONENTS Interpreter REQUIRED QUIET)
 
+  message(STATUS "running cgen for ${target}")
+
   add_custom_target(
     ${target}
     ALL
-    COMMAND "${Python3_EXECUTABLE}" -m cgen --template "${template}" --output "${outputdir}" "${inputfile}"
+    COMMAND "${Python3_EXECUTABLE}" -m src.cgen --template "${template}" --output "${outputdir}" "${inputfile}"
     DEPENDS "${inputfile}"
     BYPRODUCTS "${outputdir}/config.cpp" "${outputdir}/config.hpp"  # enums.hpp, from_string.hpp
     WORKING_DIRECTORY "${workdir}"

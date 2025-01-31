@@ -18,7 +18,7 @@ function(create_xsd_resource_for_target target definition)
       config.xsd
     COMMAND
       ${Python3_EXECUTABLE}
-      -m cgen
+      -m src.cgen
       --template "xsd"
       --output="${target_dir}"
       "${definition}"

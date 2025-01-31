@@ -19,51 +19,51 @@ options:
 elements:
   types:
     $ref: '#/types/many-types'
-    required: True
+    use: required
 
   an_integer:
     type: integer
-    required: True
+    use: required
 
   an_unsigned:
     type: unsigned
-    reqired: True
+    use: required
 
   a_string:
     type: string
-    required: True
+    use: required
 
   a_float:
     type: float
-    required: True
+    use: required
 
   a_double:
     type: double
-    required: True
+    use: required
 
   a_bool:
     type: bool
-    required: True
+    use: required
 
   an_array:
     $ref: '#/types/integer-array'
-    required: True
+    use: required
 
   a_dictionary:
     $ref: '#/types/string-string-dict'
-    required: True
+    use: required
 
   an_enum:
     $ref: '#/types/little-enum'
-    required: True
+    use: required
 
   test42:
     $ref: '#/types/test42'
-    required: True
+    use: required
 
   test43:
     $ref: '#/types/test43'
-    required: True
+    use: required
 
 types:
   many-types:
