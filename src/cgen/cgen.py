@@ -273,6 +273,57 @@ def filter_types(types: list[Type]) -> list[Type]:
     return filtered
 
 
+def reorder_types(types: list[Type]) -> list[Type]:
+    def reorder_type(types: list[Type], typeA: Type, typeB: Type) -> bool:
+        def indexOf(types: list[Type], type: Type) -> int:
+            index = -1
+            for t in types:
+                index += 1
+                if type.name == t.name:
+                    return index
+            return -1
+
+        idxA = indexOf(types, typeA)
+        if idxA == -1:
+            # tbd: error
+            return False
+        idxB = indexOf(types, typeB)
+        if idxB == -1:
+            # tbd: error
+            return False
+        if idxB <= idxA:
+            # ok
+            return False
+        logging.debug(f"moving {typeB.name} from {idxB} to {idxA+1}")
+        types.pop(idxB)
+        types.insert(idxA, typeB)
+        return True
+
+    result = types[:]
+    iteration = 0
+    while True:
+        iteration += 1
+        moves = 0
+        for type in types:
+            # check all composite types
+            if isinstance(type, ArrayType):
+                if reorder_type(result, type, type.item_type):
+                    moves += 1
+            if isinstance(type, DictionaryType):
+                if reorder_type(result, type, type.key_type):
+                    moves += 1
+                if reorder_type(result, type, type.value_type):
+                    moves += 1
+            if isinstance(type, ObjectType):
+                for field in type.fields:
+                    if reorder_type(result, type, field.type):
+                        moves += 1
+        logging.debug(f"iteration {iteration}, {moves} moves")
+        if moves == 0:
+            break
+    return result
+
+
 def load_types(types_dict: dict, elem: str) -> list[Type]:
     types = []
     for key, value in types_dict[elem].items():
@@ -401,6 +452,7 @@ def config_generator(
 
         types = sort_types(types)
         types = filter_types(types)
+        types = reorder_types(types)
 
         constraints = load_constraints(loader.data)
         assign_constraints(types, elements, constraints)
