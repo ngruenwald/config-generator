@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog][CC].
 Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV].
 
+## [0.4.3] - 2025-02-07
+
+### Fixed
+
+- Previous type-sorting fix could end up with a wrong order in certain cases
+
+
 ## [0.4.2] - 2025-01-31
 
 ### Fixed
