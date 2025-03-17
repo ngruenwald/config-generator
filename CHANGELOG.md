@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog][CC].
 Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV].
 
+## [0.5.0] - 2025-03-17
+
+### Added
+
+- Optional objects and elements can now be default initialized
+
+### Fixed
+
+- Added missing constraint definitions to the schema
+
 ## [0.4.3] - 2025-02-07
 
 ### Fixed
