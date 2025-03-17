@@ -15,8 +15,10 @@
 {%- endmacro -%}
 
 {%- macro insert_optional_struct(member) -%}
-{%- if opt.use_optional and not member.required -%}
+{%- if opt.use_optional and not member.required and not member.default -%}
 std::optional<{{ m.type_case(member.type.name) }}> {{ m.value_case(member.name) }}
+{%- elif member.default -%}
+{{ m.type_case(member.type.name) }} {{ m.value_case(member.name) }}{}
 {%- else -%}
 {{ m.type_case(member.type.name) }} {{ m.value_case(member.name) }}
 {%- endif -%}

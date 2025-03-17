@@ -351,11 +351,13 @@ class ObjectField:
         type_: Type,
         description: str = "",
         required: bool = False,
+        default: bool = False,  # only used for objects
     ):
         self.name = name
         self.type = type_
         self.description = description
         self.required = required
+        self.default = default
 
     def __str__(self):
         return f"Field{{name={self.name},type={self.type},required={self.required}}}"
@@ -379,10 +381,12 @@ class ObjectType(Type):
         name: str,
         type_: str,
         description: str = "",
+        defv: bool = False,
         fields: list[ObjectField] | None = None,
         xml: dict | None = None,
     ):
         super().__init__(name, type_, description, xml)
+        self.default = defv
         self.fields = fields if fields else []
 
     def __str__(self):
@@ -414,6 +418,7 @@ class ObjectType(Type):
             name=name,
             type_=ttype,
             description=props.get("description", ""),
+            defv=props.get("default", False),
             fields=fields,
             xml=xml,
         )
@@ -553,6 +558,7 @@ def load_ref_type(data: dict, name: str, props: dict) -> Type | None:
 
     if isinstance(t, ObjectType):
         t.description = props.get("description", t.description)
+        t.default = props.get("default", t.default)
         t.xml = props.get("xml", t.xml)
 
     return t

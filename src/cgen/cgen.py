@@ -484,6 +484,7 @@ def config_generator(
                     e,
                     e.description,
                     getattr(e, "required", False),
+                    getattr(e, "default", False),
                 )
                 for e in elements
             ],
