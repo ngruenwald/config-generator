@@ -4,6 +4,14 @@
 
 ### Elements
 
+#### config-gen
+
+```yaml
+config-gen: 0.4
+```
+
+The _config-gen_ element specifies the config-generator version.
+
 #### info
 
 ```yaml
@@ -44,15 +52,21 @@ elements:
   foo:
     type: integer
 
-  opt:
+  bar:
     type: string
     use: required
+
+  opt:
+    type: object
+    use: optional
+    default: True
 ```
 
 The _elements_ block contains the main elements of the configuration.
 Elements can either be defined locally or they can reference types.
 By default an element is optional. Use the _use_ property to mark
-it as either _optional_ or _required_.
+it as either _optional_ or _required_. The __default__ property can be
+used on optional objects to enforce default construction (c++).
 
 #### types
 
@@ -258,6 +272,7 @@ properties:
   * type        ... xml compositor type (all/choice/sequence)
   * min         ... minOccurs property for choice type
   * max         ... maxOccurs property for choice type
+* default       ... allow default construction on optional objects (c++) (default: False)
 
 A property can either be a type definition or a
 reference (_$ref_) to another type.
