@@ -43,6 +43,21 @@
         "$ref": "#/definitions/Type"
       },
       "properties": {}
+    },
+
+    "constraints": {
+      "description": "Constraint definitions",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/definitions/UniqueConstraint"
+          },
+          {
+            "$ref": "#/definitions/KeyrefConstraint"
+          }
+        ]
+      }
     }
   },
 
@@ -598,6 +613,10 @@
           "description": "Type of the type (= object)",
           "$ref": "#/definitions/TypeTypes"
         },
+        "default": {
+          "description": "Use default construction",
+          "type": "boolean"
+        },
         "properties": {
           "description": "Fields of the object",
           "type": "object"
@@ -667,6 +686,69 @@
           "type": "boolean"
         }
       }
+    },
+
+    "UniqueConstraint": {
+      "description": "Make sure that a key is unique.",
+      "type": "object",
+      "properties": {
+        "unique": {
+          "description": "Identifies the unique constraint",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "",
+          "type": "string"
+        },
+        "scope": {
+          "description": "",
+          "type": "string"
+        },
+        "field": {
+          "description": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "unique",
+        "id",
+        "scope",
+        "field"
+      ]
+    },
+
+    "KeyrefConstraint": {
+      "description": "",
+      "type": "object",
+      "properties": {
+        "keyref": {
+          "description": "Identifies the keyref constraint",
+          "type": ["object", "null"]
+        },
+        "id": {
+          "description": "",
+          "type": "string"
+        },
+        "scope": {
+          "description": "",
+          "type": "string"
+        },
+        "refer": {
+          "description": "",
+          "type": "string"
+        },
+        "field": {
+          "description": "",
+          "type": "string"
+        }
+      },
+      "required": [
+        "keyref",
+        "id",
+        "scope",
+        "refer",
+        "field"
+      ]
     }
 
   }
