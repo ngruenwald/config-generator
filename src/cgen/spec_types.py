@@ -467,7 +467,7 @@ def load_type_(data: dict, name: str, props: dict) -> Type | None:
             else:
                 return IntegerType.create(name, props, ttype="uint")
 
-        if props["type"] in ["float", "double"]:
+        if props["type"] in ["float", "double", "decimal"]:
             return FloatingType.create(name, props, ttype=props["type"])
 
         if props["type"] in ["bool", "boolean"]:
@@ -478,6 +478,9 @@ def load_type_(data: dict, name: str, props: dict) -> Type | None:
                 return EnumType.create(name, props, ttype="string")
             else:
                 return StringType.create(name, props, ttype="string")
+
+        if props["type"] in ["isodate"]:
+            return StringType.create(name, props, ttype="isodate")
 
         if props["type"] in ["array", "list"]:
             return ArrayType.create(data, name, props, ttype="array")

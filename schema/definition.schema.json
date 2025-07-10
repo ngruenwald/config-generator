@@ -217,7 +217,7 @@
         {
           "properties": {
             "type": {
-              "enum": ["float", "double"]
+              "enum": ["float", "double", "decimal"]
             }
           },
           "$ref": "#/definitions/FloatingType"
@@ -233,7 +233,7 @@
         {
           "properties": {
             "type": {
-              "enum": ["string"]
+              "enum": ["string", "isodate"]
             }
           },
           "$ref": "#/definitions/StringType"

@@ -24,8 +24,10 @@
     {%- endif -%}
   {%- elif type in ['float'] -%}xs:float
   {%- elif type in ['double'] -%}xs:double
+  {%- elif type in ['decimal'] -%}xs:decimal
   {%- elif type in ['bool'] -%}xs:boolean
   {%- elif type in ['string'] -%}xs:string
+  {%- elif type in ['isodate'] -%}xs:dateTime
   {%- elif type in ['array'] -%}{{ type_name(item_type, ut) }}
   {%- elif type in ['object'] -%}{{ t.name }}
   {%- elif type in ['enum'] -%}{{ _type_name(name, base_type, base, width, max, item_type, base_type, ut) }}
@@ -309,7 +311,7 @@
       {%- if t.min is not none %}<xs:minInclusive value="{{ t.min }}" />{% endif %}
       {%- if t.max is not none %}<xs:maxInclusive value="{{ t.max }}" />{% endif %}
     {%- endif %}
-  {%- elif t.type in ['float', 'double'] %}
+  {%- elif t.type in ['float', 'double', 'decimal'] %}
     {%- if t.min is not none %}<xs:minInclusive value="{{ t.min }}" />{% endif %}
     {%- if t.max is not none %}<xs:maxInclusive value="{{ t.max }}" />{% endif %}
   {%- elif t.type in ['bool'] %}
