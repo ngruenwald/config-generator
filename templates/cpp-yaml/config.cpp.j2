@@ -82,6 +82,7 @@ inline void from_data(
 {
     if (data.Type() == YAML::NodeType::Sequence)
     {
+        value.clear();
         for (std::size_t n = 0; n < data.size(); n++)
         {
             T tmp;
@@ -98,6 +99,7 @@ inline void from_data(
 {
     if (data.Type() == YAML::NodeType::Map)
     {
+        value.clear()
         for (YAML::const_iterator it = data.begin(); it != data.end(); ++it)
         {
             K key;
