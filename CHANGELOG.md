@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog][CC].
 Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV].
 
+## [0.5.1] - 2025-09-04
+
+### Changed
+
+- The post-processing methods in the C++ templates now return a boolean,
+  indicating if the value was modified
+
 ## [0.5.0] - 2025-03-17
 
 ### Added
