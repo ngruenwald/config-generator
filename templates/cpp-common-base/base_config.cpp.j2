@@ -138,7 +138,7 @@ void print<{{ m.type_case(type.name) }}>(
 -#}
 {%- macro process_function(type) -%}
 template<>
-void process<{{ m.type_case(type.name) }}>(
+bool process<{{ m.type_case(type.name) }}>(
     const std::vector<std::string>& name,
     {{ m.type_case(type.name) }}& config,
     post_process_fn_t& fn
@@ -149,6 +149,7 @@ void process<{{ m.type_case(type.name) }}>(
 {%- filter indent(4) -%}
 {{ process_fields(type.name, 'config.', type.fields) }}
 {%- endfilter %}
+    return true;
 }
 {%- endmacro -%}
 
@@ -491,7 +492,7 @@ inline std::vector<std::string> concat_name(
 }
 
 template<typename T>
-void process(
+bool process(
     const std::vector<std::string>& name,
     T& config,
     post_process_fn_t& fn
@@ -501,13 +502,13 @@ void process(
 {
     post_process_types_t var;
     var = &config;
-    fn(name, var {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %});
+    return fn(name, var {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %});
 }
 
 {%- if opt.use_optional %}
 
 template<typename T>
-void process(
+bool process(
     const std::vector<std::string>& name,
     std::optional<T>& config,
     post_process_fn_t& fn
@@ -515,11 +516,20 @@ void process(
     {{ pp_arg.type }} {{ pp_arg.name }}
   {%- endfor %})
 {
-    if (!config)
+    if (config)
     {
-        return;
+        return process(name, config.value(), fn {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %});
     }
-    process(name, config.value(), fn {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %});
+    else
+    {
+        T tmp;
+        if (!process(name, tmp, fn {%- for pp_arg in opt.post_process_args -%}, {{ pp_arg.name }}{% endfor %}))
+        {
+            return false;
+        }
+        config = tmp;
+        return true;
+    }
 }
 
 {% endif %}

@@ -288,7 +288,7 @@ typedef std::variant<
 
 /// Post process callback function
 typedef std::function<
-    void(
+    bool(
         const std::vector<std::string>& key,
         post_process_types_t& value
         {%- for arg in opt.post_process_args %},
