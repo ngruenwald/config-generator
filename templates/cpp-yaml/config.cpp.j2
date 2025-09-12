@@ -99,7 +99,7 @@ inline void from_data(
 {
     if (data.Type() == YAML::NodeType::Map)
     {
-        value.clear()
+        value.clear();
         for (YAML::const_iterator it = data.begin(); it != data.end(); ++it)
         {
             K key;
