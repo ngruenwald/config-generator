@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Common Changelog][CC].
 Starting with version 1.0.0 this project will adhere to [Semantic Versioning][SV].
 
+## [0.6.0] - 2026-06-29
+
+### Changed
+
+- **Breaking:** The cpp-xmlwrp template has been adapted to a breaking change in
+  the latest xmlwrp library. Compatibility with older versions can be achieved
+  by setting ```options.cpp.xmlwrp_camel_case=False```.
+
 ## [0.5.1] - 2025-09-04
 
 ### Changed
