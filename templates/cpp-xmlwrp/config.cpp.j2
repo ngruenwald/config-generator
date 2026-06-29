@@ -1,6 +1,16 @@
 {%- set opt = {} -%}
 {%- from "_options.j2" import set_options with context -%}
 {{- set_options(opt) -}}
+{%- set xmlwrp = {
+    "get_root_node": "getRootNode" if opt.xmlwrp_camel_case else "GetRootNode",
+    "is_valid": "isValid" if opt.xmlwrp_camel_case else "IsValid",
+    "has_prop": "hasProp" if opt.xmlwrp_camel_case else "HasProp",
+    "get_child": "getChild" if opt.xmlwrp_camel_case else "GetChild",
+    "get_string_prop": "getStringProp" if opt.xmlwrp_camel_case else "GetStringProp",
+    "get_name": "getName" if opt.xmlwrp_camel_case else "GetName",
+    "get_string_val": "getStringVal" if opt.xmlwrp_camel_case else "GetStringVal",
+    "get_children": "getChildren" if opt.xmlwrp_camel_case else "GetChildren",
+} -%}
 {%- extends "base_config.cpp.j2" -%}
 
 {% block specific_includes %}
@@ -68,7 +78,7 @@ inline config_data_t load_file(
 {
     auto data = config_data_t{};
     data.doc = std::make_shared<xml::Document>(filepath.c_str());
-    data.node = data.doc->GetRootNode();
+    data.node = data.doc->{{ xmlwrp.get_root_node }}();
     return data;
 }
 {% if opt.use_validate %}
@@ -81,7 +91,7 @@ inline void validate(
 
     xml::Schema schema{xsd_data, xsd_size};
 
-    if (!schema.IsValid(*data.doc))
+    if (!schema.{{ xmlwrp.is_valid }}(*data.doc))
     {
         throw xml::Exception("ERROR: configuration is not valid");
     }
@@ -98,7 +108,7 @@ inline bool contains_key(
 
         if (flags == 0 || flags & FLAG_XML_ATTRIBUTE)
         {
-            if (data.node.value().HasProp(key))
+            if (data.node.value().{{ xmlwrp.has_prop }}(key))
             {
                 return true;
             }
@@ -109,7 +119,7 @@ inline bool contains_key(
             try
             {
                 // TODO
-                auto child = data.node.value().GetChild(key);
+                auto child = data.node.value().{{ xmlwrp.get_child }}(key);
                 return true;
             }
             catch (...)
@@ -134,7 +144,7 @@ inline config_data_t get_key(
         {
             try
             {
-                return XmlWrpData{data.doc, data.node.value().GetStringProp(key)};
+                return XmlWrpData{data.doc, data.node.value().{{ xmlwrp.get_string_prop }}(key)};
             }
             catch (...)
             {
@@ -145,7 +155,7 @@ inline config_data_t get_key(
         {
             try
             {
-                return XmlWrpData{data.doc, data.node.value().GetChild(key)};
+                return XmlWrpData{data.doc, data.node.value().{{ xmlwrp.get_child }}(key)};
             }
             catch (...)
             {
@@ -153,7 +163,7 @@ inline config_data_t get_key(
         }
 
         std::ostringstream msg;
-        msg << "element/attribute '" << key << "' does not exist in '" << data.node.value().GetName() << "'";
+        msg << "element/attribute '" << key << "' does not exist in '" << data.node.value().{{ xmlwrp.get_name }}() << "'";
         throw std::runtime_error(msg.str());
     }
 
@@ -183,7 +193,7 @@ inline void from_data(
     {
         if (data.node.has_value())
         {
-            value = config::from_string<T>(data.node.value().GetStringVal());
+            value = config::from_string<T>(data.node.value().{{ xmlwrp.get_string_val }}());
             return;
         }
     }
@@ -211,7 +221,7 @@ inline void from_data(
     {
         if (data.node.has_value())
         {
-            value = config::from_string<T>(data.node.value().GetStringVal(), base);
+            value = config::from_string<T>(data.node.value().{{ xmlwrp.get_string_val }}(), base);
             return;
         }
     }
@@ -235,7 +245,7 @@ inline void from_data(
     if (data.node.has_value())
     {
         const auto& n = data.node.value();
-        for (const auto& child : n.GetChildren(opts.elementName))
+        for (const auto& child : n.{{ xmlwrp.get_children }}(opts.elementName))
         {
             T tmp;
             from_data(XmlWrpData{data.doc, child}, tmp, opts);
@@ -253,12 +263,12 @@ inline void from_data(
     if (data.node.has_value())
     {
         const auto& n = data.node.value();
-        for (const auto& child : n.GetChildren(opts.elementName))
+        for (const auto& child : n.{{ xmlwrp.get_children }}(opts.elementName))
         {
             K key;
-            from_data(XmlWrpData{data.doc, child.GetChild("key")}, key, opts);
+            from_data(XmlWrpData{data.doc, child.{{ xmlwrp.get_child }}("key")}, key, opts);
             V val;
-            from_data(XmlWrpData{data.doc, child.GetChild("value")}, val, opts);
+            from_data(XmlWrpData{data.doc, child.{{ xmlwrp.get_child }}("value")}, val, opts);
             value.insert(std::make_pair(key, val));
         }
     }
@@ -279,7 +289,7 @@ inline void get_mandatory_element(
         }
         else
         {
-            const auto children = data.node.value().GetChildren(name);
+            const auto children = data.node.value().{{ xmlwrp.get_children }}(name);
             for (const auto& child : children)
             {
                 T tmp;

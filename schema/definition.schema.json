@@ -141,6 +141,11 @@
           "type": "boolean"
         },
 
+        "xmlwrp_camel_case": {
+          "description": "Use the new libxmlwrp camelCase API instead of the legacy PascalCase API",
+          "type": "boolean"
+        },
+
         "post_process": {
           "description": "Create post-processing code",
           "type": "object",
